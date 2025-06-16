@@ -1,0 +1,19 @@
+version: "3"
+
+tasks:
+  build:
+    desc: Build the binary
+    cmds:
+      - go build -o bin/tars cmd/main.go
+
+  dev:
+    desc: Run the program in development mode
+    deps: [build]
+    cmds:
+      - ./bin/tars
+
+  rel:
+    desc: Push a new release
+    cmds:
+      - git tag v{{ .CLI_ARGS }}
+      - git push origin v{{ .CLI_ARGS }}
