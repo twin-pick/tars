@@ -4,7 +4,7 @@ tasks:
   build:
     desc: Build the binary
     cmds:
-      - go build -o bin/tars cmd/main.go
+      - go build -o bin/tars main.go
 
   dev:
     desc: Run the program in development mode
