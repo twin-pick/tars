@@ -1,5 +1,23 @@
 package main
 
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+)
+
+func setupRouter() *gin.Engine {
+	r := gin.Default()
+
+	// Ping test
+	r.GET("/ping", func(c *gin.Context) {
+		c.String(http.StatusOK, "pong")
+	})
+
+	return r
+}
+
 func main() {
-	println("Hello Twin Pick!")
+	r := setupRouter()
+	r.Run(":8080")
 }
