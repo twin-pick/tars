@@ -150,7 +150,7 @@ func fetchScrapper(usernames []string) (Film, error) {
 
 func compareAndFindCommonFilms(watchlists []WatchList) (Film, error) {
 	if len(watchlists) == 0 {
-		return Film{}, fmt.Errorf("No watchlists provided")}
+		return Film{}, fmt.Errorf("No watchlists provided")
 	}
 
 	var commonFilms []Film
@@ -180,7 +180,7 @@ func watchlistContainsFilm(film string, watchlist WatchList) bool {
 
 func chooseRandomFilm(films []Film) (Film, error) {
 	if len(films) == 0 {
-		return Film{}, fmt.Errorf("No common films found")}
+		return Film{}, fmt.Errorf("No common films found")
 	}
 	randNum := rand.Intn(len(films))
 	return fetchTmdbFilm(films[randNum].Title)
