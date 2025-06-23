@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
+	"slices"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -12,15 +15,66 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type LetterboxdWatchlistFilm struct {
-	Title     string `json:"title"`
-	Year      int    `json:"year"`
-	Author    string `json:"author"`
-	PosterUrl string `json:"poster_url"`
+type Film struct {
+	Title    string `json:"title"`
+	Year     int    `json:"year"`
+	Director string `json:"director"`
 }
 
-type LetteboxdWatchlist struct {
-	Films []LetterboxdWatchlistFilm `json:"films"`
+type tmdbSearchResponse struct {
+	Results []struct {
+		Title       string `json:"title"`
+		ReleaseDate string `json:"release_date"`
+		ID          int    `json:"id"`
+	} `json:"results"`
+}
+
+type WatchList struct {
+	Films []string `json:"films"`
+}
+
+func fetchTmdbFilm(title string) (Film, error) {
+	url := fmt.Sprintf("https://api.themoviedb.org/3/search/movie?query=%s", title)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return Film{}, err
+	}
+
+	req.Header.Add("accept", "application/json")
+	req.Header.Add("Authorization", "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJlNDBmNDcwNGRiYjZhZGJlOWVhMTFmNmMyOTQxNmQ2ZiIsIm5iZiI6MTc1MDY3MDE2MC43NTEwMDAyLCJzdWIiOiI2ODU5MWI1MDJmMWQwNzg0MTQ0YmQ1NWUiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.d9dHVIaSdu5Q27P5pYCub4D369dZoWNN5U7kEhaVY6w")
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return Film{}, err
+	}
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return Film{}, err
+	}
+
+	var searchResp tmdbSearchResponse
+	if err := json.Unmarshal(body, &searchResp); err != nil {
+		return Film{}, err
+	}
+
+	if len(searchResp.Results) == 0 {
+		return Film{}, fmt.Errorf("Any result found for '%s'", title)
+	}
+
+	first := searchResp.Results[0]
+
+	year := 0
+	if len(first.ReleaseDate) >= 4 {
+		year, _ = strconv.Atoi(first.ReleaseDate[:4])
+	}
+
+	return Film{
+		Title:    first.Title,
+		Year:     year,
+		Director: "",
+	}, nil
 }
 
 func setupRouter() *gin.Engine {
@@ -33,28 +87,34 @@ func setupRouter() *gin.Engine {
 	router.GET("/users/:usernames", func(context *gin.Context) {
 		usernamesQuery := context.Param("usernames")
 		usernames := strings.Split(usernamesQuery, ",")
-
-		results := fetchScrapper(usernames)
-
-		context.JSON(http.StatusOK, results)
+		result, err := fetchScrapper(usernames)
+		if err != nil {
+			log.Errorf("Error fetching scrapper: %v", err)
+			context.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch watchlists"})
+			return
+		}
+		context.JSON(http.StatusOK, result)
 	})
 
 	return router
 }
 
-func fetchScrapper(usernames []string) []LetterboxdWatchlistFilm {
+func fetchScrapper(usernames []string) (Film, error) {
 	var wg sync.WaitGroup
-	resultChan := make(chan LetteboxdWatchlist, len(usernames))
+	resultChan := make(chan WatchList, len(usernames))
 
 	for _, username := range usernames {
 		wg.Add(1)
+
 		go func(u string) {
 			defer wg.Done()
-			url := fmt.Sprintf("http://localhost:8000/api/watchlist/%s", u)
+
+			url := fmt.Sprintf("http://localhost:8000/api/user/watchlist/%s", u)
+
 			resp, err := http.Get(url)
 			if err != nil {
 				log.Errorf("Error for user %s: %v", u, err)
-				resultChan <- LetteboxdWatchlist{}
+				resultChan <- WatchList{}
 				return
 			}
 			defer resp.Body.Close()
@@ -62,64 +122,68 @@ func fetchScrapper(usernames []string) []LetterboxdWatchlistFilm {
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
 				log.Errorf("Error during body reading for user %s: %v", u, err)
-				resultChan <- LetteboxdWatchlist{}
+				resultChan <- WatchList{}
 				return
 			}
 
-			var data []LetterboxdWatchlistFilm
-			if err := json.Unmarshal(body, &data); err != nil {
+			var films []string
+			if err := json.Unmarshal(body, &films); err != nil {
 				log.Errorf("Error during JSON parsing for user %s: %v", u, err)
-				resultChan <- LetteboxdWatchlist{}
+				resultChan <- WatchList{}
 				return
 			}
 
-			for i := range data {
-				data[i].Author = u
-			}
-
-			resultChan <- LetteboxdWatchlist{Films: data}
+			resultChan <- WatchList{Films: films}
 		}(username)
 	}
 
 	wg.Wait()
 	close(resultChan)
 
-	allWatchlists := []LetteboxdWatchlist{}
+	watchlists := []WatchList{}
 	for wl := range resultChan {
-		allWatchlists = append(allWatchlists, wl)
+		watchlists = append(watchlists, wl)
 	}
 
-	return compareAndFindCommonFilms(allWatchlists)
+	return compareAndFindCommonFilms(watchlists)
 }
 
-func compareAndFindCommonFilms(watchlists []LetteboxdWatchlist) []LetterboxdWatchlistFilm {
+func compareAndFindCommonFilms(watchlists []WatchList) (Film, error) {
 	if len(watchlists) == 0 {
-		return nil
+		return Film{}, fmt.Errorf("No watchlists provided")}
 	}
 
-	commonFilms := make(map[string]LetterboxdWatchlistFilm)
+	var commonFilms []Film
+
 	for _, film := range watchlists[0].Films {
-		key := fmt.Sprintf("%s-%d", film.Title, film.Year)
-		commonFilms[key] = film
-	}
+		existsInAll := true
 
-	for _, watchlist := range watchlists[1:] {
-		currentFilms := make(map[string]LetterboxdWatchlistFilm)
-		for _, film := range watchlist.Films {
-			key := fmt.Sprintf("%s-%d", film.Title, film.Year)
-			if _, exists := commonFilms[key]; exists {
-				currentFilms[key] = film
+		for _, wl := range watchlists[1:] {
+			if !watchlistContainsFilm(film, wl) {
+				existsInAll = false
+				break
 			}
 		}
-		commonFilms = currentFilms
+
+		if existsInAll {
+			film := Film{Title: film}
+			commonFilms = append(commonFilms, film)
+		}
 	}
 
-	results := make([]LetterboxdWatchlistFilm, 0, len(commonFilms))
-	for _, film := range commonFilms {
-		results = append(results, film)
-	}
+	return chooseRandomFilm(commonFilms)
+}
 
-	return results
+func watchlistContainsFilm(film string, watchlist WatchList) bool {
+	return slices.Contains(watchlist.Films, film)
+}
+
+func chooseRandomFilm(films []Film) (Film, error) {
+	if len(films) == 0 {
+		return Film{}, fmt.Errorf("No common films found")}
+	}
+	randNum := rand.Intn(len(films))
+	return fetchTmdbFilm(films[randNum].Title)
 }
 
 func main() {
