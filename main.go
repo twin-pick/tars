@@ -6,6 +6,7 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -13,7 +14,10 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
+
+var bearerToken string
 
 type Film struct {
 	Title    string `json:"title"`
@@ -41,7 +45,7 @@ func fetchTmdbFilm(title string) (Film, error) {
 	}
 
 	req.Header.Add("accept", "application/json")
-	req.Header.Add("Authorization", "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJlNDBmNDcwNGRiYjZhZGJlOWVhMTFmNmMyOTQxNmQ2ZiIsIm5iZiI6MTc1MDY3MDE2MC43NTEwMDAyLCJzdWIiOiI2ODU5MWI1MDJmMWQwNzg0MTQ0YmQ1NWUiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.d9dHVIaSdu5Q27P5pYCub4D369dZoWNN5U7kEhaVY6w")
+	req.Header.Add("Authorization", "Bearer "+bearerToken)
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -90,7 +94,7 @@ func setupRouter() *gin.Engine {
 		result, err := fetchScrapper(usernames)
 		if err != nil {
 			log.Errorf("Error fetching scrapper: %v", err)
-			context.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch watchlists"})
+			context.JSON(http.StatusInternalServerError, gin.H{"error": err})
 			return
 		}
 		context.JSON(http.StatusOK, result)
@@ -187,6 +191,12 @@ func chooseRandomFilm(films []Film) (Film, error) {
 }
 
 func main() {
+	godotenv.Load()
+	bearerToken = os.Getenv("TMDB_TOKEN")
+	if bearerToken == "" {
+		log.Fatal("TMDB_TOKEN env var is not set")
+	}
+
 	router := setupRouter()
 	router.Run(":8080")
 }
