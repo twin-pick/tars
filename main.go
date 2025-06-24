@@ -17,7 +17,9 @@ import (
 	"github.com/joho/godotenv"
 )
 
-var bearerToken string
+var tmdbToken string
+var scrapperPort string
+var port string
 
 type Film struct {
 	Title    string `json:"title"`
@@ -25,7 +27,7 @@ type Film struct {
 	Director string `json:"director"`
 }
 
-type tmdbSearchResponse struct {
+type TMDBSearchResponse struct {
 	Results []struct {
 		Title       string `json:"title"`
 		ReleaseDate string `json:"release_date"`
@@ -35,50 +37,6 @@ type tmdbSearchResponse struct {
 
 type WatchList struct {
 	Films []string `json:"films"`
-}
-
-func fetchTmdbFilm(title string) (Film, error) {
-	url := fmt.Sprintf("https://api.themoviedb.org/3/search/movie?query=%s", title)
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return Film{}, err
-	}
-
-	req.Header.Add("accept", "application/json")
-	req.Header.Add("Authorization", "Bearer "+bearerToken)
-
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return Film{}, err
-	}
-	defer res.Body.Close()
-
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return Film{}, err
-	}
-
-	var searchResp tmdbSearchResponse
-	if err := json.Unmarshal(body, &searchResp); err != nil {
-		return Film{}, err
-	}
-
-	if len(searchResp.Results) == 0 {
-		return Film{}, fmt.Errorf("Any result found for '%s'", title)
-	}
-
-	first := searchResp.Results[0]
-
-	year := 0
-	if len(first.ReleaseDate) >= 4 {
-		year, _ = strconv.Atoi(first.ReleaseDate[:4])
-	}
-
-	return Film{
-		Title:    first.Title,
-		Year:     year,
-		Director: "",
-	}, nil
 }
 
 func setupRouter() *gin.Engine {
@@ -190,13 +148,73 @@ func chooseRandomFilm(films []Film) (Film, error) {
 	return fetchTmdbFilm(films[randNum].Title)
 }
 
-func main() {
+func fetchTmdbFilm(title string) (Film, error) {
+	url := fmt.Sprintf("https://api.themoviedb.org/3/search/movie?query=%s", title)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return Film{}, err
+	}
+
+	req.Header.Add("accept", "application/json")
+	req.Header.Add("Authorization", "Bearer "+tmdbToken)
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return Film{}, err
+	}
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return Film{}, err
+	}
+
+	var searchResp TMDBSearchResponse
+	if err := json.Unmarshal(body, &searchResp); err != nil {
+		return Film{}, err
+	}
+
+	if len(searchResp.Results) == 0 {
+		return Film{}, fmt.Errorf("Any result found for '%s'", title)
+	}
+
+	first := searchResp.Results[0]
+
+	year := 0
+	if len(first.ReleaseDate) >= 4 {
+		year, _ = strconv.Atoi(first.ReleaseDate[:4])
+	}
+
+	return Film{
+		Title:    first.Title,
+		Year:     year,
+		Director: "",
+	}, nil
+}
+
+func loadEnv() {
 	godotenv.Load()
-	bearerToken = os.Getenv("TMDB_TOKEN")
-	if bearerToken == "" {
+
+	tmdbToken = os.Getenv("TMDB_TOKEN")
+	if tmdbToken == "" {
 		log.Fatal("TMDB_TOKEN env var is not set")
 	}
 
+	scrapperPort = os.Getenv("SCRAPPER_PORT")
+	if scrapperPort == "" {
+		log.Fatal("SCRAPPER_PORT env var is not set")
+	}
+
+	port = os.Getenv("EXPOSED_PORT")
+	if port == "" {
+		log.Fatal("EXPOSED_PORT env var is not set")
+	}
+}
+
+func main() {
+	loadEnv()
+
+	port = fmt.Sprintf(":%s", port)
 	router := setupRouter()
-	router.Run(":8080")
+	router.Run(port)
 }
