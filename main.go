@@ -7,7 +7,6 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -20,6 +19,11 @@ import (
 var tmdbToken string
 var scrapperPort string
 var port string
+
+type FilmEntry struct {
+	Title string `json:"title"`
+	Date  string `json:"date"`
+}
 
 type Film struct {
 	Title    string `json:"title"`
@@ -36,7 +40,7 @@ type TMDBSearchResponse struct {
 }
 
 type WatchList struct {
-	Films []string `json:"films"`
+	Films []Film `json:"films"`
 }
 
 func setupRouter() *gin.Engine {
@@ -55,6 +59,13 @@ func setupRouter() *gin.Engine {
 			context.JSON(http.StatusInternalServerError, gin.H{"error": err})
 			return
 		}
+
+		if result == (Film{}) {
+			log.Info("No common films found")
+			context.JSON(http.StatusNotFound, gin.H{"message": "No common films found"})
+			return
+		}
+
 		context.JSON(http.StatusOK, result)
 	})
 
@@ -71,7 +82,7 @@ func fetchScrapper(usernames []string) (Film, error) {
 		go func(u string) {
 			defer wg.Done()
 
-			url := fmt.Sprintf("http://localhost:8000/api/user/watchlist/%s", u)
+			url := fmt.Sprintf("http://localhost:8000/api/v1/%s/watchlist", u)
 
 			resp, err := http.Get(url)
 			if err != nil {
@@ -87,12 +98,25 @@ func fetchScrapper(usernames []string) (Film, error) {
 				resultChan <- WatchList{}
 				return
 			}
+			// log.Infof("Response body for user %s: %s", u, string(body))
 
-			var films []string
-			if err := json.Unmarshal(body, &films); err != nil {
+			var entries []FilmEntry
+			if err := json.Unmarshal(body, &entries); err != nil {
 				log.Errorf("Error during JSON parsing for user %s: %v", u, err)
 				resultChan <- WatchList{}
 				return
+			}
+			films := make([]Film, len(entries))
+			for i, e := range entries {
+				year := 0
+				if len(e.Date) >= 4 {
+					year, _ = strconv.Atoi(e.Date[:4])
+				}
+				films[i] = Film{
+					Title:    e.Title,
+					Year:     year,
+					Director: "",
+				}
 			}
 
 			resultChan <- WatchList{Films: films}
@@ -104,7 +128,9 @@ func fetchScrapper(usernames []string) (Film, error) {
 
 	watchlists := []WatchList{}
 	for wl := range resultChan {
-		watchlists = append(watchlists, wl)
+		if len(wl.Films) != 0 {
+			watchlists = append(watchlists, wl)
+		}
 	}
 
 	return compareAndFindCommonFilms(watchlists)
@@ -121,14 +147,13 @@ func compareAndFindCommonFilms(watchlists []WatchList) (Film, error) {
 		existsInAll := true
 
 		for _, wl := range watchlists[1:] {
-			if !watchlistContainsFilm(film, wl) {
+			if !watchlistContainsFilm(film.Title, wl) { // on compare par titre uniquement
 				existsInAll = false
 				break
 			}
 		}
 
 		if existsInAll {
-			film := Film{Title: film}
 			commonFilms = append(commonFilms, film)
 		}
 	}
@@ -136,8 +161,13 @@ func compareAndFindCommonFilms(watchlists []WatchList) (Film, error) {
 	return chooseRandomFilm(commonFilms)
 }
 
-func watchlistContainsFilm(film string, watchlist WatchList) bool {
-	return slices.Contains(watchlist.Films, film)
+func watchlistContainsFilm(title string, watchlist WatchList) bool {
+	for _, film := range watchlist.Films {
+		if film.Title == title {
+			return true
+		}
+	}
+	return false
 }
 
 func chooseRandomFilm(films []Film) (Film, error) {
@@ -145,7 +175,8 @@ func chooseRandomFilm(films []Film) (Film, error) {
 		return Film{}, fmt.Errorf("No common films found")
 	}
 	randNum := rand.Intn(len(films))
-	return fetchTmdbFilm(films[randNum].Title)
+	// return fetchTmdbFilm(films[randNum].Title)
+	return films[randNum], nil
 }
 
 func fetchTmdbFilm(title string) (Film, error) {

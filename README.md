@@ -17,6 +17,12 @@ HTTP server will be running on `localhost:8080`.
 > [!WARNING]
 > In order to use `tars`, you need to ensure that [wall-e](https://github.com/twin-pick/wall-e) is running locally.
 
+Now you can send requests using the following endpoint:
+
+```bash
+curl -X GET http://localhost:8080/users/abroudoux,mascim
+```
+
 ## Why Go?
 
 Go is a statically typed, compiled language designed for simplicity and efficiency. It offers excellent performance and strong concurrency support. It seems to be a good fit for building a core service like `tars`, which requires high performance and reliability.
