@@ -68,7 +68,7 @@ func fetchWatchlist(username string) (WatchList, error) {
 		return WatchList{}, fmt.Errorf("error parsing JSON for user %s: %w", username, err)
 	}
 
-	log.Info("Fetched %d films for user: %s", len(films), username)
+	log.Infof("Fetched %d films for user: %s", len(films), username)
 
 	return WatchList{Films: films}, nil
 }
@@ -102,15 +102,6 @@ func compareAndFindCommonFilms(watchlists []WatchList) (Film, error) {
 	}
 
 	return chooseRandomFilm(commonFilms)
-}
-
-func watchlistContainsFilm(title string, watchlist WatchList) bool {
-	for _, film := range watchlist.Films {
-		if film.Title == title {
-			return true
-		}
-	}
-	return false
 }
 
 func chooseRandomFilm(films []Film) (Film, error) {
