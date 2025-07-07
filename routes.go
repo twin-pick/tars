@@ -13,10 +13,10 @@ func (s *Server) registerRoutes() {
 	api := s.Router.Group("/api")
 	v1 := api.Group("/v1")
 
-	v1.GET("/users/:usernames", s.handleUserWatchlist)
+	v1.GET("/users/:usernames", s.findCommonFilm)
 }
 
-func (s *Server) handleUserWatchlist(c *gin.Context) {
+func (s *Server) findCommonFilm(c *gin.Context) {
 	log.Info(time.Now())
 
 	usernamesQuery := c.Param("usernames")
