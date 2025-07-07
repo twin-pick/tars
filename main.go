@@ -7,7 +7,6 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -20,57 +19,18 @@ var tmdbToken string
 var scrapperPort string
 var port string
 
-type FilmEntry struct {
-	Title string `json:"title"`
-	Date  string `json:"date"`
-}
-
 type Film struct {
-	Title    string `json:"title"`
-	Year     int    `json:"year"`
-	Director string `json:"director"`
-}
-
-type TMDBSearchResponse struct {
-	Results []struct {
-		Title       string `json:"title"`
-		ReleaseDate string `json:"release_date"`
-		ID          int    `json:"id"`
-	} `json:"results"`
+	Title string `json:"title"`
+	Date  int    `json:"date"`
 }
 
 type WatchList struct {
 	Films []Film `json:"films"`
 }
 
-func setupRouter() *gin.Engine {
-	router := gin.Default()
-
-	router.GET("/twin", func(context *gin.Context) {
-		context.String(http.StatusOK, "Pick!")
-	})
-
-	router.GET("/users/:usernames", func(context *gin.Context) {
-		usernamesQuery := context.Param("usernames")
-		usernames := strings.Split(usernamesQuery, ",")
-		result, err := fetchScrapper(usernames)
-		if err != nil {
-			log.Errorf("Error fetching scrapper: %v", err)
-			context.JSON(http.StatusInternalServerError, gin.H{"error": err})
-			return
-		}
-
-		if result == (Film{}) {
-			log.Info("No common films found")
-			context.JSON(http.StatusNotFound, gin.H{"message": "No common films found"})
-			return
-		}
-
-		context.JSON(http.StatusOK, result)
-	})
-
-	return router
-}
+type Router = gin.Engine
+type Context = gin.Context
+type Header = gin.H
 
 func fetchScrapper(usernames []string) (Film, error) {
 	var wg sync.WaitGroup
@@ -78,55 +38,22 @@ func fetchScrapper(usernames []string) (Film, error) {
 
 	for _, username := range usernames {
 		wg.Add(1)
-
 		go func(u string) {
 			defer wg.Done()
-
-			url := fmt.Sprintf("http://localhost:8000/api/v1/%s/watchlist", u)
-
-			resp, err := http.Get(url)
+			watchlist, err := fetchWatchlist(u)
 			if err != nil {
-				log.Errorf("Error for user %s: %v", u, err)
+				log.Errorf("Failed to fetch watchlist for user %s: %v", u, err)
 				resultChan <- WatchList{}
 				return
 			}
-			defer resp.Body.Close()
-
-			body, err := io.ReadAll(resp.Body)
-			if err != nil {
-				log.Errorf("Error during body reading for user %s: %v", u, err)
-				resultChan <- WatchList{}
-				return
-			}
-			// log.Infof("Response body for user %s: %s", u, string(body))
-
-			var entries []FilmEntry
-			if err := json.Unmarshal(body, &entries); err != nil {
-				log.Errorf("Error during JSON parsing for user %s: %v", u, err)
-				resultChan <- WatchList{}
-				return
-			}
-			films := make([]Film, len(entries))
-			for i, e := range entries {
-				year := 0
-				if len(e.Date) >= 4 {
-					year, _ = strconv.Atoi(e.Date[:4])
-				}
-				films[i] = Film{
-					Title:    e.Title,
-					Year:     year,
-					Director: "",
-				}
-			}
-
-			resultChan <- WatchList{Films: films}
+			resultChan <- watchlist
 		}(username)
 	}
 
 	wg.Wait()
 	close(resultChan)
 
-	watchlists := []WatchList{}
+	var watchlists []WatchList
 	for wl := range resultChan {
 		if len(wl.Films) != 0 {
 			watchlists = append(watchlists, wl)
@@ -134,6 +61,32 @@ func fetchScrapper(usernames []string) (Film, error) {
 	}
 
 	return compareAndFindCommonFilms(watchlists)
+}
+
+func fetchWatchlist(username string) (WatchList, error) {
+	log.Infof("Fetching watchlist for user: %s", username)
+
+	url := fmt.Sprintf("http://localhost:8000/api/v2/%s/watchlist", username)
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return WatchList{}, fmt.Errorf("error for user %s: %w", username, err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return WatchList{}, fmt.Errorf("error reading body for user %s: %w", username, err)
+	}
+
+	var films []Film
+	if err := json.Unmarshal(body, &films); err != nil {
+		return WatchList{}, fmt.Errorf("error parsing JSON for user %s: %w", username, err)
+	}
+
+	log.Infof("Fetched %d films for user: %s", len(films), username)
+
+	return WatchList{Films: films}, nil
 }
 
 func compareAndFindCommonFilms(watchlists []WatchList) (Film, error) {
@@ -147,13 +100,14 @@ func compareAndFindCommonFilms(watchlists []WatchList) (Film, error) {
 		existsInAll := true
 
 		for _, wl := range watchlists[1:] {
-			if !watchlistContainsFilm(film.Title, wl) { // on compare par titre uniquement
+			if !watchlistContainsFilm(film.Title, wl) {
 				existsInAll = false
 				break
 			}
 		}
 
 		if existsInAll {
+			log.Infof("Found common film: %s (%d)", film.Title, film.Date)
 			commonFilms = append(commonFilms, film)
 		}
 	}
@@ -175,52 +129,7 @@ func chooseRandomFilm(films []Film) (Film, error) {
 		return Film{}, fmt.Errorf("No common films found")
 	}
 	randNum := rand.Intn(len(films))
-	// return fetchTmdbFilm(films[randNum].Title)
 	return films[randNum], nil
-}
-
-func fetchTmdbFilm(title string) (Film, error) {
-	url := fmt.Sprintf("https://api.themoviedb.org/3/search/movie?query=%s", title)
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return Film{}, err
-	}
-
-	req.Header.Add("accept", "application/json")
-	req.Header.Add("Authorization", "Bearer "+tmdbToken)
-
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return Film{}, err
-	}
-	defer res.Body.Close()
-
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return Film{}, err
-	}
-
-	var searchResp TMDBSearchResponse
-	if err := json.Unmarshal(body, &searchResp); err != nil {
-		return Film{}, err
-	}
-
-	if len(searchResp.Results) == 0 {
-		return Film{}, fmt.Errorf("Any result found for '%s'", title)
-	}
-
-	first := searchResp.Results[0]
-
-	year := 0
-	if len(first.ReleaseDate) >= 4 {
-		year, _ = strconv.Atoi(first.ReleaseDate[:4])
-	}
-
-	return Film{
-		Title:    first.Title,
-		Year:     year,
-		Director: "",
-	}, nil
 }
 
 func loadEnv() {
@@ -242,10 +151,35 @@ func loadEnv() {
 	}
 }
 
+func createRouter() *Router {
+	router := gin.Default()
+
+	router.GET("/users/:usernames", func(context *Context) {
+		usernamesQuery := context.Param("usernames")
+		usernames := strings.Split(usernamesQuery, ",")
+		result, err := fetchScrapper(usernames)
+		if err != nil {
+			log.Errorf("Error fetching scrapper: %v", err)
+			context.JSON(http.StatusInternalServerError, Header{"error": err})
+			return
+		}
+
+		if result == (Film{}) {
+			log.Info("No common films found")
+			context.JSON(http.StatusNotFound, Header{"message": "No common films found"})
+			return
+		}
+
+		log.Infof("Common film found: %s (%d)", result.Title, result.Date)
+		context.JSON(http.StatusOK, result)
+	})
+
+	return router
+}
+
 func main() {
 	loadEnv()
 
-	port = fmt.Sprintf(":%s", port)
-	router := setupRouter()
-	router.Run(port)
+	router := createRouter()
+	router.Run(fmt.Sprintf(":%s", port))
 }
