@@ -9,7 +9,7 @@ You can either use [Taskfile](https://taskfile.dev/) or `go` command lines :
 ```bash
 task dev
 # or
-go run main.go
+go run cmd/main.go
 ```
 
 HTTP server will be running on `localhost:8080`.
