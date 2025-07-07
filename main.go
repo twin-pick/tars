@@ -9,32 +9,106 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
 
-var tmdbToken string
-var scrapperPort string
-var port string
-
-type Film struct {
-	Title string `json:"title"`
-	Date  int    `json:"date"`
+type Config struct {
+	TMDBToken    string
+	ScrapperPort string
+	ExposedPort  string
 }
 
-type WatchList struct {
-	Films []Film `json:"films"`
+type Server struct {
+	Router *Router
+	Config Config
 }
 
 type Router = gin.Engine
 type Context = gin.Context
 type Header = gin.H
 
+type Film struct {
+	Title string `json:"title"`
+	Date  string `json:"date"`
+}
+
+type WatchList struct {
+	Films []Film `json:"films"`
+}
+
+func loadEnv() Config {
+	godotenv.Load()
+
+	cfg := Config{
+		TMDBToken:    os.Getenv("TMDB_TOKEN"),
+		ScrapperPort: os.Getenv("SCRAPPER_PORT"),
+		ExposedPort:  os.Getenv("EXPOSED_PORT"),
+	}
+
+	if cfg.TMDBToken == "" {
+		log.Fatal("TMDB_TOKEN env var is not set")
+	}
+	if cfg.ScrapperPort == "" {
+		log.Fatal("SCRAPPER_PORT env var is not set")
+	}
+	if cfg.ExposedPort == "" {
+		log.Fatal("EXPOSED_PORT env var is not set")
+	}
+
+	return cfg
+}
+
+func NewServer(cfg Config) *Server {
+	server := &Server{
+		Router: gin.Default(),
+		Config: cfg,
+	}
+	server.registerRoutes()
+	return server
+}
+
+func (s *Server) registerRoutes() {
+	s.Router.GET("/users/:usernames", s.handleUserWatchlist)
+}
+
+func (s *Server) handleUserWatchlist(c *gin.Context) {
+	log.Info(time.Now())
+
+	usernamesQuery := c.Param("usernames")
+	usernames := strings.Split(usernamesQuery, ",")
+
+	result, err := fetchScrapper(usernames)
+	if err != nil {
+		log.Errorf("Error fetching scrapper: %v", err)
+		c.JSON(http.StatusInternalServerError, Header{"error": err.Error()})
+		return
+	}
+
+	if result == (Film{}) {
+		log.Warn("No common films found")
+		c.JSON(http.StatusNotFound, Header{"message": "No common films found"})
+		return
+	}
+
+	log.Info(time.Now())
+
+	log.Infof("Common film found: %s (%s)", result.Title, result.Date)
+	c.JSON(http.StatusOK, result)
+}
+
+func (s *Server) Run() {
+	s.Router.Run(fmt.Sprintf(":%s", s.Config.ExposedPort))
+}
+
 func fetchScrapper(usernames []string) (Film, error) {
 	var wg sync.WaitGroup
 	resultChan := make(chan WatchList, len(usernames))
+
+	log.Info(time.Now())
 
 	for _, username := range usernames {
 		wg.Add(1)
@@ -49,6 +123,8 @@ func fetchScrapper(usernames []string) (Film, error) {
 			resultChan <- watchlist
 		}(username)
 	}
+
+	log.Info(time.Now())
 
 	wg.Wait()
 	close(resultChan)
@@ -84,7 +160,7 @@ func fetchWatchlist(username string) (WatchList, error) {
 		return WatchList{}, fmt.Errorf("error parsing JSON for user %s: %w", username, err)
 	}
 
-	log.Infof("Fetched %d films for user: %s", len(films), username)
+	log.Info("Fetched %d films for user: %s", len(films), username)
 
 	return WatchList{Films: films}, nil
 }
@@ -94,21 +170,26 @@ func compareAndFindCommonFilms(watchlists []WatchList) (Film, error) {
 		return Film{}, fmt.Errorf("No watchlists provided")
 	}
 
-	var commonFilms []Film
+	filmCount := make(map[string]Film)
+	occurrences := make(map[string]int)
 
-	for _, film := range watchlists[0].Films {
-		existsInAll := true
-
-		for _, wl := range watchlists[1:] {
-			if !watchlistContainsFilm(film.Title, wl) {
-				existsInAll = false
-				break
+	for _, wl := range watchlists {
+		seen := make(map[string]bool)
+		for _, film := range wl.Films {
+			if !seen[film.Title] {
+				occurrences[film.Title]++
+				if _, exists := filmCount[film.Title]; !exists {
+					filmCount[film.Title] = film
+				}
+				seen[film.Title] = true
 			}
 		}
+	}
 
-		if existsInAll {
-			log.Infof("Found common film: %s (%d)", film.Title, film.Date)
-			commonFilms = append(commonFilms, film)
+	var commonFilms []Film
+	for title, count := range occurrences {
+		if count == len(watchlists) {
+			commonFilms = append(commonFilms, filmCount[title])
 		}
 	}
 
@@ -132,54 +213,8 @@ func chooseRandomFilm(films []Film) (Film, error) {
 	return films[randNum], nil
 }
 
-func loadEnv() {
-	godotenv.Load()
-
-	tmdbToken = os.Getenv("TMDB_TOKEN")
-	if tmdbToken == "" {
-		log.Fatal("TMDB_TOKEN env var is not set")
-	}
-
-	scrapperPort = os.Getenv("SCRAPPER_PORT")
-	if scrapperPort == "" {
-		log.Fatal("SCRAPPER_PORT env var is not set")
-	}
-
-	port = os.Getenv("EXPOSED_PORT")
-	if port == "" {
-		log.Fatal("EXPOSED_PORT env var is not set")
-	}
-}
-
-func createRouter() *Router {
-	router := gin.Default()
-
-	router.GET("/users/:usernames", func(context *Context) {
-		usernamesQuery := context.Param("usernames")
-		usernames := strings.Split(usernamesQuery, ",")
-		result, err := fetchScrapper(usernames)
-		if err != nil {
-			log.Errorf("Error fetching scrapper: %v", err)
-			context.JSON(http.StatusInternalServerError, Header{"error": err})
-			return
-		}
-
-		if result == (Film{}) {
-			log.Info("No common films found")
-			context.JSON(http.StatusNotFound, Header{"message": "No common films found"})
-			return
-		}
-
-		log.Infof("Common film found: %s (%d)", result.Title, result.Date)
-		context.JSON(http.StatusOK, result)
-	})
-
-	return router
-}
-
 func main() {
-	loadEnv()
-
-	router := createRouter()
-	router.Run(fmt.Sprintf(":%s", port))
+	config := loadEnv()
+	server := NewServer(config)
+	server.Run()
 }
