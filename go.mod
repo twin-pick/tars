@@ -1,6 +1,6 @@
 module github.com/twin-pick/tars
 
-go 1.21.5
+go 1.24.4
 
 require (
 	github.com/charmbracelet/log v0.4.2
