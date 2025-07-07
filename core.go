@@ -7,22 +7,19 @@ import (
 	"math/rand"
 	"net/http"
 	"sync"
-	"time"
 
 	"github.com/charmbracelet/log"
 )
 
-func fetchScrapper(usernames []string) (Film, error) {
+func fetchScrapper(usernames []string, genres []string) (Film, error) {
 	var wg sync.WaitGroup
 	resultChan := make(chan WatchList, len(usernames))
-
-	log.Info(time.Now())
 
 	for _, username := range usernames {
 		wg.Add(1)
 		go func(u string) {
 			defer wg.Done()
-			watchlist, err := fetchWatchlist(u)
+			watchlist, err := fetchWatchlist(u, genres)
 			if err != nil {
 				log.Errorf("Failed to fetch watchlist for user %s: %v", u, err)
 				resultChan <- WatchList{}
@@ -31,8 +28,6 @@ func fetchScrapper(usernames []string) (Film, error) {
 			resultChan <- watchlist
 		}(username)
 	}
-
-	log.Info(time.Now())
 
 	wg.Wait()
 	close(resultChan)
@@ -47,10 +42,12 @@ func fetchScrapper(usernames []string) (Film, error) {
 	return compareAndFindCommonFilms(watchlists)
 }
 
-func fetchWatchlist(username string) (WatchList, error) {
-	log.Infof("Fetching watchlist for user: %s", username)
-
+func fetchWatchlist(username string, genres []string) (WatchList, error) {
 	url := fmt.Sprintf("http://localhost:8000/api/v2/%s/watchlist", username)
+
+	for _, genre := range genres {
+		log.Infof("Adding genre filter: %s", genre)
+	}
 
 	resp, err := http.Get(url)
 	if err != nil {
