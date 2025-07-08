@@ -11,12 +11,12 @@ func NewConfig() Config {
 	godotenv.Load()
 
 	cfg := Config{
-		TMDBToken:    os.Getenv("TMDB_TOKEN"),
+		OMDBApiKey:   os.Getenv("OMDB_API_KEY"),
 		ScrapperPort: os.Getenv("SCRAPPER_PORT"),
 		ExposedPort:  os.Getenv("EXPOSED_PORT"),
 	}
 
-	if cfg.TMDBToken == "" {
+	if cfg.OMDBApiKey == "" {
 		log.Fatal("TMDB_TOKEN env var is not set")
 	}
 	if cfg.ScrapperPort == "" {
