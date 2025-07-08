@@ -9,7 +9,7 @@ func film(title string) Film {
 	return Film{Title: title, Date: "2000"}
 }
 
-func TestCompareAndFindCommonFilms(t *testing.T) {
+func (s *Server) TestCompareAndFindCommonFilms(t *testing.T) {
 	tests := []struct {
 		name       string
 		watchlists []WatchList
@@ -58,7 +58,7 @@ func TestCompareAndFindCommonFilms(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := compareAndFindCommonFilms(tc.watchlists)
+			result, err := s.compareAndFindCommonFilms(tc.watchlists)
 
 			if tc.expectErr {
 				if err == nil {
