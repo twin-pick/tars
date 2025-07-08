@@ -25,7 +25,7 @@ func (s *Server) findCommonFilm(c *Context) {
 
 	result, err := s.fetchScrapper(usernames, genres)
 	if err != nil {
-		log.Errorf("Error (fetchScrapper): %v", err)
+		log.Errorf("Error fetchScrapper: %v", err)
 		c.JSON(http.StatusInternalServerError, Header{"error": err.Error()})
 		return
 	}

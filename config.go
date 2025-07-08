@@ -17,7 +17,7 @@ func NewConfig() Config {
 	}
 
 	if cfg.OMDBApiKey == "" {
-		log.Fatal("TMDB_TOKEN env var is not set")
+		log.Fatal("OMDB_API_KEY env var is not set")
 	}
 	if cfg.ScrapperPort == "" {
 		log.Fatal("SCRAPPER_PORT env var is not set")
