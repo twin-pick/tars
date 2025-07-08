@@ -7,7 +7,7 @@ type Context = gin.Context
 type Header = gin.H
 
 type Config struct {
-	TMDBToken    string
+	OMDBApiKey   string
 	ScrapperPort string
 	ExposedPort  string
 }
@@ -18,10 +18,17 @@ type Server struct {
 }
 
 type Film struct {
-	Title string `json:"title"`
-	Date  string `json:"date"`
+	Title    string `json:"title"`
+	Director string `json:"director"`
+	Date     string `json:"date"`
+	Poster   string `json:"poster"`
 }
 
 type WatchList struct {
 	Films []Film `json:"films"`
+}
+
+type OMDbResponse struct {
+	Director string `json:"Director"`
+	Poster   string `json:"Poster"`
 }
