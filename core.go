@@ -10,10 +10,9 @@ import (
 	"sync"
 
 	"github.com/charmbracelet/log"
-	"github.com/gin-gonic/gin"
 )
 
-func (s *Server) findCommonFilm(c *gin.Context) {
+func (s *Server) findCommonFilm(c *Context) {
 	usernamesQuery := c.Param("usernames")
 	usernames := strings.Split(usernamesQuery, ",")
 
