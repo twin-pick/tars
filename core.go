@@ -6,10 +6,39 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/charmbracelet/log"
+	"github.com/gin-gonic/gin"
 )
+
+func (s *Server) findCommonFilm(c *gin.Context) {
+	usernamesQuery := c.Param("usernames")
+	usernames := strings.Split(usernamesQuery, ",")
+
+	genresQuery := c.Param("genres")
+	var genres []string
+	if genresQuery != "" {
+		genres = strings.Split(genresQuery, ",")
+	}
+
+	result, err := fetchScrapper(usernames, genres)
+	if err != nil {
+		log.Errorf("Error fetching scrapper: %v", err)
+		c.JSON(http.StatusInternalServerError, Header{"error": err.Error()})
+		return
+	}
+
+	if result == (Film{}) {
+		log.Warn("No common films found")
+		c.JSON(http.StatusNotFound, Header{"message": "No common films found"})
+		return
+	}
+
+	log.Infof("Common film found: %s (%s)", result.Title, result.Date)
+	c.JSON(http.StatusOK, result)
+}
 
 func fetchScrapper(usernames []string, genres []string) (Film, error) {
 	var wg sync.WaitGroup
