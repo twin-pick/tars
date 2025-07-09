@@ -1,6 +1,17 @@
 package tars
 
-func NewQueryParams(usernames, genres []string) *QueryParams {
+import "strings"
+
+func NewQueryParams(c *Context) *QueryParams {
+	usernamesQuery := c.Param("usernames")
+	usernames := strings.Split(usernamesQuery, ",")
+
+	genresQuery := c.Param("genres")
+	var genres []string
+	if genresQuery != "" {
+		genres = strings.Split(genresQuery, ",")
+	}
+
 	return &QueryParams{
 		usernames: usernames,
 		genres:    genres,

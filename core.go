@@ -7,23 +7,13 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
-	"strings"
 	"sync"
 
 	"github.com/charmbracelet/log"
 )
 
 func (s *Server) findCommonFilm(c *Context) {
-	usernamesQuery := c.Param("usernames")
-	usernames := strings.Split(usernamesQuery, ",")
-
-	genresQuery := c.Param("genres")
-	var genres []string
-	if genresQuery != "" {
-		genres = strings.Split(genresQuery, ",")
-	}
-
-	queryParams := NewQueryParams(usernames, genres)
+	queryParams := NewQueryParams(c)
 
 	result, err := s.fetchScrapper(queryParams)
 	if err != nil {
@@ -50,7 +40,7 @@ func (s *Server) fetchScrapper(qp *QueryParams) (Film, error) {
 		wg.Add(1)
 		go func(u string) {
 			defer wg.Done()
-			watchlist, err := s.fetchWatchlist(qp)
+			watchlist, err := s.fetchUserWatchlist(qp)
 			if err != nil {
 				log.Errorf("Failed to fetch watchlist for user %s: %v", u, err)
 				resultChan <- WatchList{}
@@ -73,7 +63,7 @@ func (s *Server) fetchScrapper(qp *QueryParams) (Film, error) {
 	return s.compareAndFindCommonFilms(watchlists)
 }
 
-func (s *Server) fetchWatchlist(qp *QueryParams) (WatchList, error) {
+func (s *Server) fetchUserWatchlist(qp *QueryParams) (WatchList, error) {
 	url := fmt.Sprintf("http://localhost:8000/api/v2/%s/watchlist", qp.usernames)
 
 	for _, genre := range qp.genres {
@@ -129,10 +119,10 @@ func (s *Server) compareAndFindCommonFilms(watchlists []WatchList) (Film, error)
 		}
 	}
 
-	return s.chooseRandomFilm(commonFilms)
+	return s.selectRandomFilm(commonFilms)
 }
 
-func (s *Server) chooseRandomFilm(films []Film) (Film, error) {
+func (s *Server) selectRandomFilm(films []Film) (Film, error) {
 	if len(films) == 0 {
 		return Film{}, fmt.Errorf("No common films found")
 	}
