@@ -17,6 +17,11 @@ type Server struct {
 	Config Config
 }
 
+type QueryParams struct {
+	usernames []string
+	genres    []string
+}
+
 type Film struct {
 	Title    string `json:"title"`
 	Director string `json:"director"`

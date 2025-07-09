@@ -23,7 +23,9 @@ func (s *Server) findCommonFilm(c *Context) {
 		genres = strings.Split(genresQuery, ",")
 	}
 
-	result, err := s.fetchScrapper(usernames, genres)
+	queryParams := NewQueryParams(usernames, genres)
+
+	result, err := s.fetchScrapper(queryParams)
 	if err != nil {
 		log.Errorf("Error fetchScrapper: %v", err)
 		c.JSON(http.StatusInternalServerError, Header{"error": err.Error()})
@@ -40,15 +42,15 @@ func (s *Server) findCommonFilm(c *Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-func (s *Server) fetchScrapper(usernames []string, genres []string) (Film, error) {
+func (s *Server) fetchScrapper(qp *QueryParams) (Film, error) {
 	var wg sync.WaitGroup
-	resultChan := make(chan WatchList, len(usernames))
+	resultChan := make(chan WatchList, len(qp.usernames))
 
-	for _, username := range usernames {
+	for _, username := range qp.usernames {
 		wg.Add(1)
 		go func(u string) {
 			defer wg.Done()
-			watchlist, err := s.fetchWatchlist(u, genres)
+			watchlist, err := s.fetchWatchlist(qp)
 			if err != nil {
 				log.Errorf("Failed to fetch watchlist for user %s: %v", u, err)
 				resultChan <- WatchList{}
@@ -71,30 +73,30 @@ func (s *Server) fetchScrapper(usernames []string, genres []string) (Film, error
 	return s.compareAndFindCommonFilms(watchlists)
 }
 
-func (s *Server) fetchWatchlist(username string, genres []string) (WatchList, error) {
-	url := fmt.Sprintf("http://localhost:8000/api/v2/%s/watchlist", username)
+func (s *Server) fetchWatchlist(qp *QueryParams) (WatchList, error) {
+	url := fmt.Sprintf("http://localhost:8000/api/v2/%s/watchlist", qp.usernames)
 
-	for _, genre := range genres {
+	for _, genre := range qp.genres {
 		log.Infof("Adding genre filter: %s", genre)
 	}
 
 	resp, err := http.Get(url)
 	if err != nil {
-		return WatchList{}, fmt.Errorf("error for user %s: %w", username, err)
+		return WatchList{}, fmt.Errorf("error for user %s: %w", qp.usernames, err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return WatchList{}, fmt.Errorf("error reading body for user %s: %w", username, err)
+		return WatchList{}, fmt.Errorf("error reading body for user %s: %w", qp.usernames, err)
 	}
 
 	var films []Film
 	if err := json.Unmarshal(body, &films); err != nil {
-		return WatchList{}, fmt.Errorf("error parsing JSON for user %s: %w", username, err)
+		return WatchList{}, fmt.Errorf("error parsing JSON for user %s: %w", qp.usernames, err)
 	}
 
-	log.Infof("Fetched %d films for user: %s", len(films), username)
+	log.Infof("Fetched %d films for user: %s", len(films), qp.usernames)
 
 	return WatchList{Films: films}, nil
 }
