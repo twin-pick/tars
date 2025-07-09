@@ -7,24 +7,20 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func NewConfig() Config {
+func NewConfig() *Config {
 	godotenv.Load()
 
-	cfg := Config{
-		OMDBApiKey:   os.Getenv("OMDB_API_KEY"),
-		ScrapperPort: os.Getenv("SCRAPPER_PORT"),
-		ExposedPort:  os.Getenv("EXPOSED_PORT"),
+	return &Config{
+		OMDBApiKey:   loadEnv("OMDB_API_KEY"),
+		ScrapperPort: loadEnv("SCRAPPER_PORT"),
+		ExposedPort:  loadEnv("EXPOSED_PORT"),
 	}
+}
 
-	if cfg.OMDBApiKey == "" {
-		log.Fatal("OMDB_API_KEY env var is not set")
+func loadEnv(key string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		log.Fatal("Environment variable not set: " + key)
 	}
-	if cfg.ScrapperPort == "" {
-		log.Fatal("SCRAPPER_PORT env var is not set")
-	}
-	if cfg.ExposedPort == "" {
-		log.Fatal("EXPOSED_PORT env var is not set")
-	}
-
-	return cfg
+	return value
 }

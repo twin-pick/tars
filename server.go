@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func NewServer(cfg Config) *Server {
+func NewServer(cfg *Config) *Server {
 	server := &Server{
 		Router: gin.Default(),
 		Config: cfg,

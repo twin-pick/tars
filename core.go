@@ -64,7 +64,7 @@ func (s *Server) fetchScrapper(qp *QueryParams) (Film, error) {
 }
 
 func (s *Server) fetchUserWatchlist(qp *QueryParams) (WatchList, error) {
-	url := fmt.Sprintf("http://localhost:8000/api/v2/%s/watchlist", qp.usernames)
+	url := fmt.Sprintf("http://localhost:%s/api/v2/%s/watchlist", s.Config.ScrapperPort, qp.usernames)
 
 	for _, genre := range qp.genres {
 		log.Infof("Adding genre filter: %s", genre)
@@ -96,12 +96,13 @@ func (s *Server) compareAndFindCommonFilms(watchlists []WatchList) (Film, error)
 		return Film{}, fmt.Errorf("No watchlists provided")
 	}
 
-	filmCount := make(map[string]Film)
+	filmCount := make(map[string]*Film)
 	occurrences := make(map[string]int)
 
 	for _, wl := range watchlists {
 		seen := make(map[string]bool)
-		for _, film := range wl.Films {
+		for i := range wl.Films {
+			film := &wl.Films[i]
 			if !seen[film.Title] {
 				occurrences[film.Title]++
 				if _, exists := filmCount[film.Title]; !exists {
@@ -112,7 +113,7 @@ func (s *Server) compareAndFindCommonFilms(watchlists []WatchList) (Film, error)
 		}
 	}
 
-	var commonFilms []Film
+	var commonFilms []*Film
 	for title, count := range occurrences {
 		if count == len(watchlists) {
 			commonFilms = append(commonFilms, filmCount[title])
@@ -122,7 +123,7 @@ func (s *Server) compareAndFindCommonFilms(watchlists []WatchList) (Film, error)
 	return s.selectRandomFilm(commonFilms)
 }
 
-func (s *Server) selectRandomFilm(films []Film) (Film, error) {
+func (s *Server) selectRandomFilm(films []*Film) (Film, error) {
 	if len(films) == 0 {
 		return Film{}, fmt.Errorf("No common films found")
 	}
@@ -130,7 +131,7 @@ func (s *Server) selectRandomFilm(films []Film) (Film, error) {
 	return s.getFilmDetails(films[randNum])
 }
 
-func (s *Server) getFilmDetails(film Film) (Film, error) {
+func (s *Server) getFilmDetails(film *Film) (Film, error) {
 	escapedTitle := url.QueryEscape(film.Title)
 	url := fmt.Sprintf("http://www.omdbapi.com/?t=%s&y=%s&apikey=%s", escapedTitle, film.Date, s.Config.OMDBApiKey)
 
@@ -156,5 +157,5 @@ func (s *Server) getFilmDetails(film Film) (Film, error) {
 	film.Director = omdb.Director
 	film.Poster = omdb.Poster
 
-	return film, nil
+	return *film, nil
 }

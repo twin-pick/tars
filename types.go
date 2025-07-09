@@ -14,7 +14,7 @@ type Config struct {
 
 type Server struct {
 	Router *Router
-	Config Config
+	Config *Config
 }
 
 type QueryParams struct {
