@@ -22,7 +22,7 @@ func (s *Server) findCommonFilm(c *Context) {
 		return
 	}
 
-	if result == (Film{}) {
+	if isEmptyFilm(result) {
 		log.Warn("No common films found")
 		c.JSON(http.StatusNotFound, Header{"message": "No common films found"})
 		return
@@ -30,6 +30,10 @@ func (s *Server) findCommonFilm(c *Context) {
 
 	log.Infof("Common film found: %s (%s)", result.Title, result.Date)
 	c.JSON(http.StatusOK, result)
+}
+
+func isEmptyFilm(film Film) bool {
+	return film == Film{}
 }
 
 func (s *Server) fetchScrapper(qp *QueryParams) (Film, error) {
@@ -54,6 +58,7 @@ func (s *Server) fetchScrapper(qp *QueryParams) (Film, error) {
 	close(resultChan)
 
 	var watchlists []WatchList
+	watchlists = make([]WatchList, 0, len(resultChan))
 	for wl := range resultChan {
 		if len(wl.Films) != 0 {
 			watchlists = append(watchlists, wl)
