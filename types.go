@@ -18,8 +18,8 @@ type Server struct {
 }
 
 type QueryParams struct {
-	usernames []string
-	genres    []string
+	Usernames []string
+	Genres    []string
 }
 
 type Film struct {
@@ -36,4 +36,9 @@ type WatchList struct {
 type OMDbResponse struct {
 	Director string `json:"Director"`
 	Poster   string `json:"Poster"`
+}
+
+type Vote struct {
+	Film         *Film
+	WantsToWatch bool
 }

@@ -38,9 +38,9 @@ func isEmptyFilm(film Film) bool {
 
 func (s *Server) fetchScrapper(qp *QueryParams) (Film, error) {
 	var wg sync.WaitGroup
-	resultChan := make(chan WatchList, len(qp.usernames))
+	resultChan := make(chan WatchList, len(qp.Usernames))
 
-	for _, username := range qp.usernames {
+	for _, username := range qp.Usernames {
 		wg.Add(1)
 		go func(u string) {
 			defer wg.Done()
@@ -69,29 +69,29 @@ func (s *Server) fetchScrapper(qp *QueryParams) (Film, error) {
 }
 
 func (s *Server) fetchUserWatchlist(qp *QueryParams) (WatchList, error) {
-	url := fmt.Sprintf("http://localhost:%s/api/v2/%s/watchlist", s.Config.ScrapperPort, qp.usernames)
+	url := fmt.Sprintf("http://localhost:%s/api/v2/%s/watchlist", s.Config.ScrapperPort, qp.Usernames)
 
-	for _, genre := range qp.genres {
+	for _, genre := range qp.Genres {
 		log.Infof("Adding genre filter: %s", genre)
 	}
 
 	resp, err := http.Get(url)
 	if err != nil {
-		return WatchList{}, fmt.Errorf("error for user %s: %w", qp.usernames, err)
+		return WatchList{}, fmt.Errorf("error for user %s: %w", qp.Usernames, err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return WatchList{}, fmt.Errorf("error reading body for user %s: %w", qp.usernames, err)
+		return WatchList{}, fmt.Errorf("error reading body for user %s: %w", qp.Usernames, err)
 	}
 
 	var films []Film
 	if err := json.Unmarshal(body, &films); err != nil {
-		return WatchList{}, fmt.Errorf("error parsing JSON for user %s: %w", qp.usernames, err)
+		return WatchList{}, fmt.Errorf("error parsing JSON for user %s: %w", qp.Usernames, err)
 	}
 
-	log.Infof("Fetched %d films for user: %s", len(films), qp.usernames)
+	log.Infof("Fetched %d films for user: %s", len(films), qp.Usernames)
 
 	return WatchList{Films: films}, nil
 }

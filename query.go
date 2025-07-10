@@ -13,7 +13,7 @@ func NewQueryParams(c *Context) *QueryParams {
 	}
 
 	return &QueryParams{
-		usernames: usernames,
-		genres:    genres,
+		Usernames: usernames,
+		Genres:    genres,
 	}
 }
