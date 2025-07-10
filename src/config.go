@@ -1,4 +1,4 @@
-package tars
+package src
 
 import (
 	"os"

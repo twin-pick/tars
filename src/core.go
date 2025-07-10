@@ -1,10 +1,9 @@
-package tars
+package src
 
 import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"sync"
@@ -12,33 +11,16 @@ import (
 	"github.com/charmbracelet/log"
 )
 
-func (s *Server) findCommonFilm(c *Context) {
-	queryParams := NewQueryParams(c)
-
-	result, err := s.fetchScrapper(queryParams)
-	if err != nil {
-		log.Errorf("Error fetchScrapper: %v", err)
-		c.JSON(http.StatusInternalServerError, Header{"error": err.Error()})
-		return
+func NewWatchlist(films []*Film) *WatchList {
+	if films == nil {
+		films = []*Film{}
 	}
-
-	if isEmptyFilm(result) {
-		log.Warn("No common films found")
-		c.JSON(http.StatusNotFound, Header{"message": "No common films found"})
-		return
-	}
-
-	log.Infof("Common film found: %s (%s)", result.Title, result.Date)
-	c.JSON(http.StatusOK, result)
+	return &WatchList{Films: films}
 }
 
-func isEmptyFilm(film Film) bool {
-	return film == Film{}
-}
-
-func (s *Server) fetchScrapper(qp *QueryParams) (Film, error) {
+func (s *Server) getCommonsFilms(qp *QueryParams) ([]*Film, error) {
 	var wg sync.WaitGroup
-	resultChan := make(chan WatchList, len(qp.Usernames))
+	resultChan := make(chan *WatchList, len(qp.Usernames))
 
 	for _, username := range qp.Usernames {
 		wg.Add(1)
@@ -47,7 +29,7 @@ func (s *Server) fetchScrapper(qp *QueryParams) (Film, error) {
 			watchlist, err := s.fetchUserWatchlist(qp)
 			if err != nil {
 				log.Errorf("Failed to fetch watchlist for user %s: %v", u, err)
-				resultChan <- WatchList{}
+				resultChan <- &WatchList{}
 				return
 			}
 			resultChan <- watchlist
@@ -57,18 +39,24 @@ func (s *Server) fetchScrapper(qp *QueryParams) (Film, error) {
 	wg.Wait()
 	close(resultChan)
 
-	var watchlists []WatchList
-	watchlists = make([]WatchList, 0, len(resultChan))
+	var watchlists []*WatchList
+	watchlists = make([]*WatchList, 0, len(resultChan))
 	for wl := range resultChan {
 		if len(wl.Films) != 0 {
 			watchlists = append(watchlists, wl)
 		}
 	}
 
-	return s.compareAndFindCommonFilm(watchlists)
+	commonFilms, err := s.compareAndFindCommonFilms(watchlists)
+	if err != nil {
+		log.Errorf("Error comparing watchlists: %v", err)
+		return []*Film{}, fmt.Errorf("error comparing watchlists: %w", err)
+	}
+
+	return commonFilms, nil
 }
 
-func (s *Server) fetchUserWatchlist(qp *QueryParams) (WatchList, error) {
+func (s *Server) fetchUserWatchlist(qp *QueryParams) (*WatchList, error) {
 	url := fmt.Sprintf("http://localhost:%s/api/v2/%s/watchlist", s.Config.ScrapperPort, qp.Usernames)
 
 	for _, genre := range qp.Genres {
@@ -77,28 +65,28 @@ func (s *Server) fetchUserWatchlist(qp *QueryParams) (WatchList, error) {
 
 	resp, err := http.Get(url)
 	if err != nil {
-		return WatchList{}, fmt.Errorf("error for user %s: %w", qp.Usernames, err)
+		return &WatchList{}, fmt.Errorf("error for user %s: %w", qp.Usernames, err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return WatchList{}, fmt.Errorf("error reading body for user %s: %w", qp.Usernames, err)
+		return &WatchList{}, fmt.Errorf("error reading body for user %s: %w", qp.Usernames, err)
 	}
 
-	var films []Film
+	var films []*Film
 	if err := json.Unmarshal(body, &films); err != nil {
-		return WatchList{}, fmt.Errorf("error parsing JSON for user %s: %w", qp.Usernames, err)
+		return &WatchList{}, fmt.Errorf("error parsing JSON for user %s: %w", qp.Usernames, err)
 	}
 
 	log.Infof("Fetched %d films for user: %s", len(films), qp.Usernames)
 
-	return WatchList{Films: films}, nil
+	return NewWatchlist(films), nil
 }
 
-func (s *Server) compareAndFindCommonFilm(watchlists []WatchList) (Film, error) {
+func (s *Server) compareAndFindCommonFilms(watchlists []*WatchList) ([]*Film, error) {
 	if len(watchlists) == 0 {
-		return Film{}, fmt.Errorf("No watchlists provided")
+		return []*Film{}, fmt.Errorf("No watchlists provided")
 	}
 
 	filmCount := make(map[string]*Film)
@@ -107,7 +95,7 @@ func (s *Server) compareAndFindCommonFilm(watchlists []WatchList) (Film, error) 
 	for _, wl := range watchlists {
 		seen := make(map[string]bool)
 		for i := range wl.Films {
-			film := &wl.Films[i]
+			film := wl.Films[i]
 			if !seen[film.Title] {
 				occurrences[film.Title]++
 				if _, exists := filmCount[film.Title]; !exists {
@@ -125,18 +113,10 @@ func (s *Server) compareAndFindCommonFilm(watchlists []WatchList) (Film, error) 
 		}
 	}
 
-	return s.selectRandomFilm(commonFilms)
+	return commonFilms, nil
 }
 
-func (s *Server) selectRandomFilm(films []*Film) (Film, error) {
-	if len(films) == 0 {
-		return Film{}, fmt.Errorf("No common films found")
-	}
-	randNum := rand.Intn(len(films))
-	return s.getFilmDetails(films[randNum])
-}
-
-func (s *Server) getFilmDetails(film *Film) (Film, error) {
+func (s *Server) getFilmDetails(film *Film) (*Film, error) {
 	escapedTitle := url.QueryEscape(film.Title)
 	url := fmt.Sprintf("http://www.omdbapi.com/?t=%s&y=%s&apikey=%s", escapedTitle, film.Date, s.Config.OMDBApiKey)
 
@@ -144,23 +124,23 @@ func (s *Server) getFilmDetails(film *Film) (Film, error) {
 
 	resp, err := http.Get(url)
 	if err != nil {
-		return Film{}, fmt.Errorf("error fetching film details: %w", err)
+		return &Film{}, fmt.Errorf("error fetching film details: %w", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return Film{}, fmt.Errorf("error reading response body: %w", err)
+		return &Film{}, fmt.Errorf("error reading response body: %w", err)
 	}
 
 	var omdb OMDbResponse
 	err = json.Unmarshal(body, &omdb)
 	if err != nil {
-		return Film{}, fmt.Errorf("error parsing OMDb response: %w", err)
+		return &Film{}, fmt.Errorf("error parsing OMDb response: %w", err)
 	}
 
 	film.Director = omdb.Director
 	film.Poster = omdb.Poster
 
-	return *film, nil
+	return film, nil
 }

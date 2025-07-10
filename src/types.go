@@ -1,20 +1,20 @@
-package tars
+package src
 
 import "github.com/gin-gonic/gin"
 
-type Router = gin.Engine
 type Context = gin.Context
 type Header = gin.H
+type Router = gin.Engine
+
+type Server struct {
+	Router *Router
+	Config *Config
+}
 
 type Config struct {
 	OMDBApiKey   string
 	ScrapperPort string
 	ExposedPort  string
-}
-
-type Server struct {
-	Router *Router
-	Config *Config
 }
 
 type QueryParams struct {
@@ -30,7 +30,7 @@ type Film struct {
 }
 
 type WatchList struct {
-	Films []Film `json:"films"`
+	Films []*Film `json:"films"`
 }
 
 type OMDbResponse struct {
