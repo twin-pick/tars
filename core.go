@@ -65,7 +65,7 @@ func (s *Server) fetchScrapper(qp *QueryParams) (Film, error) {
 		}
 	}
 
-	return s.compareAndFindCommonFilms(watchlists)
+	return s.compareAndFindCommonFilm(watchlists)
 }
 
 func (s *Server) fetchUserWatchlist(qp *QueryParams) (WatchList, error) {
@@ -96,7 +96,7 @@ func (s *Server) fetchUserWatchlist(qp *QueryParams) (WatchList, error) {
 	return WatchList{Films: films}, nil
 }
 
-func (s *Server) compareAndFindCommonFilms(watchlists []WatchList) (Film, error) {
+func (s *Server) compareAndFindCommonFilm(watchlists []WatchList) (Film, error) {
 	if len(watchlists) == 0 {
 		return Film{}, fmt.Errorf("No watchlists provided")
 	}

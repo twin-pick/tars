@@ -58,7 +58,7 @@ func (s *Server) TestCompareAndFindCommonFilms(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := s.compareAndFindCommonFilms(tc.watchlists)
+			result, err := s.compareAndFindCommonFilm(tc.watchlists)
 
 			if tc.expectErr {
 				if err == nil {
