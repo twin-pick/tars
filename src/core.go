@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
-
-	"github.com/charmbracelet/log"
 )
 
 func NewWatchlist(films []*Film) *WatchList {
@@ -28,7 +26,7 @@ func (s *Server) getCommonsFilms(qp *QueryParams) ([]*Film, error) {
 			defer wg.Done()
 			watchlist, err := s.fetchUserWatchlist(qp)
 			if err != nil {
-				log.Errorf("Failed to fetch watchlist for user %s: %v", u, err)
+				logError("Failed to fetch watchlist for user %s: %v", u, err)
 				resultChan <- &WatchList{}
 				return
 			}
@@ -49,7 +47,7 @@ func (s *Server) getCommonsFilms(qp *QueryParams) ([]*Film, error) {
 
 	commonFilms, err := s.compareAndFindCommonFilms(watchlists)
 	if err != nil {
-		log.Errorf("Error comparing watchlists: %v", err)
+		logError("Error comparing watchlists: %v", err)
 		return []*Film{}, fmt.Errorf("error comparing watchlists: %w", err)
 	}
 
@@ -60,7 +58,7 @@ func (s *Server) fetchUserWatchlist(qp *QueryParams) (*WatchList, error) {
 	url := fmt.Sprintf("http://localhost:%s/api/v2/%s/watchlist", s.Config.ScrapperPort, qp.Usernames)
 
 	for _, genre := range qp.Genres {
-		log.Infof("Adding genre filter: %s", genre)
+		logInfo("Adding genre filter: %s", genre)
 	}
 
 	resp, err := http.Get(url)
@@ -79,7 +77,7 @@ func (s *Server) fetchUserWatchlist(qp *QueryParams) (*WatchList, error) {
 		return &WatchList{}, fmt.Errorf("error parsing JSON for user %s: %w", qp.Usernames, err)
 	}
 
-	log.Infof("Fetched %d films for user: %s", len(films), qp.Usernames)
+	logInfo("Fetched %d films for user: %s", len(films), qp.Usernames)
 
 	return NewWatchlist(films), nil
 }
@@ -120,7 +118,7 @@ func (s *Server) getFilmDetails(film *Film) (*Film, error) {
 	escapedTitle := url.QueryEscape(film.Title)
 	url := fmt.Sprintf("http://www.omdbapi.com/?t=%s&y=%s&apikey=%s", escapedTitle, film.Date, s.Config.OMDBApiKey)
 
-	log.Infof("Fetching details for film: %s from URL: %s", film.Title, url)
+	logInfo("Fetching details for film: %s from URL: %s", film.Title, url)
 
 	resp, err := http.Get(url)
 	if err != nil {
