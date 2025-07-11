@@ -24,7 +24,7 @@ func (s *Server) getCommonsFilms(qp *QueryParams) ([]*Film, error) {
 		wg.Add(1)
 		go func(u string) {
 			defer wg.Done()
-			watchlist, err := s.fetchUserWatchlist(qp)
+			watchlist, err := s.fetchUserWatchlist(username, qp)
 			if err != nil {
 				logError("Failed to fetch watchlist for user %s: %v", u, err)
 				resultChan <- &WatchList{}
@@ -54,8 +54,8 @@ func (s *Server) getCommonsFilms(qp *QueryParams) ([]*Film, error) {
 	return commonFilms, nil
 }
 
-func (s *Server) fetchUserWatchlist(qp *QueryParams) (*WatchList, error) {
-	url := fmt.Sprintf("http://localhost:%s/api/v2/%s/watchlist", s.Config.ScrapperPort, qp.Usernames)
+func (s *Server) fetchUserWatchlist(username string, qp *QueryParams) (*WatchList, error) {
+	url := fmt.Sprintf("http://localhost:%s/api/v2/%s/watchlist", s.Config.ScrapperPort, username)
 
 	for _, genre := range qp.Genres {
 		logInfo("Adding genre filter: %s", genre)
@@ -63,21 +63,21 @@ func (s *Server) fetchUserWatchlist(qp *QueryParams) (*WatchList, error) {
 
 	resp, err := http.Get(url)
 	if err != nil {
-		return &WatchList{}, fmt.Errorf("error for user %s: %w", qp.Usernames, err)
+		return &WatchList{}, fmt.Errorf("error for user %s: %w", username, err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return &WatchList{}, fmt.Errorf("error reading body for user %s: %w", qp.Usernames, err)
+		return &WatchList{}, fmt.Errorf("error reading body for user %s: %w", username, err)
 	}
 
 	var films []*Film
 	if err := json.Unmarshal(body, &films); err != nil {
-		return &WatchList{}, fmt.Errorf("error parsing JSON for user %s: %w", qp.Usernames, err)
+		return &WatchList{}, fmt.Errorf("error parsing JSON for user %s: %w", username, err)
 	}
 
-	logInfo("Fetched %d films for user: %s", len(films), qp.Usernames)
+	logInfo("Fetched %d films for user: %s", len(films), username)
 
 	return NewWatchlist(films), nil
 }
