@@ -12,15 +12,15 @@ task dev
 go run cmd/main.go
 ```
 
-HTTP server will be running on `localhost:8080`.
-
 > [!WARNING]
-> In order to use `tars`, you need to ensure that [wall-e](https://github.com/twin-pick/wall-e) is running locally.
+> Make sure you have create a `.env` file in the root directory based on the `.env.example` file
+
+In order to use `tars`, you need to ensure that [wall-e](https://github.com/twin-pick/wall-e) is running locally
 
 Now you can send requests using the following endpoint:
 
 ```bash
-curl -X GET http://localhost:8080/api/v1/users/abroudoux,mascim
+curl -X GET http://localhost:8080/api/v1/common/abroudoux,mascim
 ```
 
 ## Why Go?
@@ -33,4 +33,4 @@ Go is a statically typed, compiled language designed for simplicity and efficien
 
 ## License
 
-This project is under [MIT License](LICENSE).
+This project is under [MIT License](LICENSE)

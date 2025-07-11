@@ -1,9 +1,8 @@
-package tars
+package src
 
 import (
 	"os"
 
-	"github.com/charmbracelet/log"
 	"github.com/joho/godotenv"
 )
 
@@ -20,7 +19,7 @@ func NewConfig() *Config {
 func loadEnv(key string) string {
 	value := os.Getenv(key)
 	if value == "" {
-		log.Fatal("Environment variable not set: " + key)
+		logFatal("Environment variable not set: " + key)
 	}
 	return value
 }
