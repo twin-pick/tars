@@ -1,0 +1,11 @@
+LICENSE
+README.md
+Taskfile.md
+.goreleaser.yaml
+.gitignore
+.env.example
+/bin
+.DS_Store
+.idea/
+.vscode/
+.git/
