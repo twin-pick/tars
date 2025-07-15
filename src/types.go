@@ -42,3 +42,5 @@ type Vote struct {
 	Film         *Film
 	WantsToWatch bool
 }
+
+type Votes = []*Vote

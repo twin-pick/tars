@@ -3,6 +3,7 @@ package src
 import (
 	"os"
 
+	"github.com/charmbracelet/log"
 	"github.com/joho/godotenv"
 )
 
@@ -19,7 +20,7 @@ func NewConfig() *Config {
 func loadEnv(key string) string {
 	value := os.Getenv(key)
 	if value == "" {
-		logFatal("Environment variable not set: " + key)
+		log.Fatalf("Environment variable not set: ", key)
 	}
 	return value
 }
