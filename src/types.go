@@ -1,10 +1,15 @@
-package tars
+package src
 
 import "github.com/gin-gonic/gin"
 
-type Router = gin.Engine
 type Context = gin.Context
 type Header = gin.H
+type Router = gin.Engine
+
+type Server struct {
+	Router *Router
+	Config *Config
+}
 
 type Config struct {
 	OMDBApiKey   string
@@ -12,9 +17,9 @@ type Config struct {
 	ExposedPort  string
 }
 
-type Server struct {
-	Router *Router
-	Config Config
+type QueryParams struct {
+	Usernames []string
+	Genres    []string
 }
 
 type Film struct {
@@ -25,10 +30,15 @@ type Film struct {
 }
 
 type WatchList struct {
-	Films []Film `json:"films"`
+	Films []*Film `json:"films"`
 }
 
 type OMDbResponse struct {
 	Director string `json:"Director"`
 	Poster   string `json:"Poster"`
+}
+
+type Vote struct {
+	Film         *Film
+	WantsToWatch bool
 }

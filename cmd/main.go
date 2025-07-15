@@ -1,11 +1,11 @@
 package main
 
 import (
-	tars "github.com/twin-pick/tars"
+	. "github.com/twin-pick/tars/src"
 )
 
 func main() {
-	config := tars.NewConfig()
-	server := tars.NewServer(config)
+	config := NewConfig()
+	server := NewServer(config)
 	server.Run()
 }
