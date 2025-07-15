@@ -131,14 +131,14 @@ func (s *Server) getFilmDetails(film *Film) (*Film, error) {
 		return &Film{}, fmt.Errorf("error reading response body: %w", err)
 	}
 
-	var omdb OMDbResponse
-	err = json.Unmarshal(body, &omdb)
+	var omdbResponse OMDbResponse
+	err = json.Unmarshal(body, &omdbResponse)
 	if err != nil {
 		return &Film{}, fmt.Errorf("error parsing OMDb response: %w", err)
 	}
 
-	film.Director = omdb.Director
-	film.Poster = omdb.Poster
+	film.Director = omdbResponse.Director
+	film.Poster = omdbResponse.Poster
 
 	return film, nil
 }
