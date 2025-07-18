@@ -10,5 +10,6 @@ func main() {
 		panic(err)
 	}
 	server := NewServer(config)
+	server.RegisterRoutes()
 	server.Run()
 }

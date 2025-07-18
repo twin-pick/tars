@@ -7,19 +7,17 @@ import (
 )
 
 func NewServer(cfg *Config) *Server {
-	server := &Server{
+	return &Server{
 		Router: gin.Default(),
 		Config: cfg,
 	}
-	server.registerRoutes()
-	return server
 }
 
 func (s *Server) Run() {
 	s.Router.Run(fmt.Sprintf(":%s", s.Config.ExposedPort))
 }
 
-func (s *Server) registerRoutes() {
+func (s *Server) RegisterRoutes() {
 	api := s.Router.Group("/api")
 	v1 := api.Group("/v1")
 	v2 := api.Group("/v2")
