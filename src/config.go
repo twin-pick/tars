@@ -1,26 +1,39 @@
 package src
 
 import (
+	"fmt"
 	"os"
 
-	"github.com/charmbracelet/log"
 	"github.com/joho/godotenv"
 )
 
-func NewConfig() *Config {
-	godotenv.Load()
+func NewConfig() (*Config, error) {
+	_ = godotenv.Load()
+
+	omdbKey, err := loadEnv("OMDB_API_KEY")
+	if err != nil {
+		return nil, err
+	}
+	scrapperPort, err := loadEnv("SCRAPPER_PORT")
+	if err != nil {
+		return nil, err
+	}
+	exposedPort, err := loadEnv("EXPOSED_PORT")
+	if err != nil {
+		return nil, err
+	}
 
 	return &Config{
-		OMDBApiKey:   loadEnv("OMDB_API_KEY"),
-		ScrapperPort: loadEnv("SCRAPPER_PORT"),
-		ExposedPort:  loadEnv("EXPOSED_PORT"),
-	}
+		OMDBApiKey:   omdbKey,
+		ScrapperPort: scrapperPort,
+		ExposedPort:  exposedPort,
+	}, nil
 }
 
-func loadEnv(key string) string {
+func loadEnv(key string) (string, error) {
 	value := os.Getenv(key)
 	if value == "" {
-		log.Fatalf("Environment variable not set: %s", key)
+		return "", fmt.Errorf("environment variable not set: %s", key)
 	}
-	return value
+	return value, nil
 }

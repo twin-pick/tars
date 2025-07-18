@@ -5,7 +5,10 @@ import (
 )
 
 func main() {
-	config := NewConfig()
+	config, err := NewConfig()
+	if err != nil {
+		panic(err)
+	}
 	server := NewServer(config)
 	server.Run()
 }
