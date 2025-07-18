@@ -20,7 +20,7 @@ func NewConfig() *Config {
 func loadEnv(key string) string {
 	value := os.Getenv(key)
 	if value == "" {
-		log.Fatalf("Environment variable not set: ", key)
+		log.Fatalf("Environment variable not set: %s", key)
 	}
 	return value
 }

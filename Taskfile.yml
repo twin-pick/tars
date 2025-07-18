@@ -12,6 +12,11 @@ tasks:
     cmds:
       - ./bin/tars
 
+  test:
+    desc: Run tests
+    cmds:
+      - go test -v ./src
+
   rel:
     desc: Push a new release
     cmds:

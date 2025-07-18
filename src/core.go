@@ -12,6 +12,13 @@ import (
 	"github.com/charmbracelet/log"
 )
 
+func NewFilm(title string, date string) *Film {
+	return &Film{
+		Title: title,
+		Date:  date,
+	}
+}
+
 func NewWatchlist(films []*Film) *WatchList {
 	if films == nil {
 		films = []*Film{}
