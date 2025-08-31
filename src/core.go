@@ -65,7 +65,7 @@ func (s *Server) getCommonsFilms(qp *QueryParams) ([]*Film, error) {
 }
 
 func (s *Server) fetchUserWatchlist(username string, qp *QueryParams) (*WatchList, error) {
-	url := fmt.Sprintf("http://localhost:%s/api/v2/%s/watchlist", s.Config.ScrapperPort, username)
+	url := fmt.Sprintf("http://localhost:%s/api/v4/%s/watchlist", s.Config.ScrapperPort, username)
 
 	if qp.Genres != nil {
 		url += fmt.Sprintf("/%s", strings.Join(qp.Genres, ","))
