@@ -55,7 +55,7 @@ func (s *Server) getCommonsFilms(qp *QueryParams) ([]*Film, error) {
 		}
 	}
 
-	commonFilms, err := s.compareAndFindCommonFilms(watchlists)
+	commonFilms, err := s.compareWatchlists(watchlists)
 	if err != nil {
 		log.Errorf("Error comparing watchlists: %v", err)
 		return []*Film{}, fmt.Errorf("error comparing watchlists: %w", err)
@@ -91,7 +91,7 @@ func (s *Server) fetchUserWatchlist(username string, qp *QueryParams) (*WatchLis
 	return NewWatchlist(films), nil
 }
 
-func (s *Server) compareAndFindCommonFilms(watchlists []*WatchList) ([]*Film, error) {
+func (s *Server) compareWatchlists(watchlists []*WatchList) ([]*Film, error) {
 	if len(watchlists) == 0 {
 		return []*Film{}, fmt.Errorf("No watchlists provided")
 	}

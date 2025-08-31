@@ -9,7 +9,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
 	server := NewServer(config)
-	server.RegisterRoutes()
 	server.Run()
 }

@@ -14,6 +14,7 @@ func NewServer(cfg *Config) *Server {
 }
 
 func (s *Server) Run() {
+	s.RegisterRoutes()
 	s.Router.Run(fmt.Sprintf(":%s", s.Config.ExposedPort))
 }
 

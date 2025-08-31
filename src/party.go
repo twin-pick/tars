@@ -8,9 +8,9 @@ import (
 )
 
 func (s *Server) findPartyFilm(c *Context) {
-	querryParams := NewQueryParams(c)
+	queryParams := NewQueryParams(c)
 
-	commonFilms, err := s.getCommonsFilms(querryParams)
+	commonFilms, err := s.getCommonsFilms(queryParams)
 	if err != nil {
 		log.Errorf("Error getCommonsFilms: %v", err)
 		c.JSON(http.StatusInternalServerError, Header{"error": err.Error()})
