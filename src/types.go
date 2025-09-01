@@ -39,8 +39,8 @@ type OMDbResponse struct {
 }
 
 type Vote struct {
-	Film         *Film
-	WantsToWatch bool
+	Film        *Film
+	WantToWatch bool
 }
 
 type Votes = []*Vote

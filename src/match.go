@@ -8,8 +8,13 @@ import (
 	"github.com/charmbracelet/log"
 )
 
-func (s *Server) findCommonFilm(c *Context) {
-	queryParams := NewQueryParams(c)
+func (s *Server) match(c *Context) {
+	queryParams, err := NewQueryParams(c)
+	if err != nil {
+		log.Errorf("Error parsing query params: %v", err)
+		c.JSON(http.StatusBadRequest, Header{"error": err.Error()})
+		return
+	}
 
 	commonFilms, err := s.getCommonsFilms(queryParams)
 	if err != nil {

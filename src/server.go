@@ -14,16 +14,16 @@ func NewServer(cfg *Config) *Server {
 }
 
 func (s *Server) Run() {
-	s.RegisterRoutes()
+	s.registerRoutes()
 	s.Router.Run(fmt.Sprintf(":%s", s.Config.ExposedPort))
 }
 
-func (s *Server) RegisterRoutes() {
+func (s *Server) registerRoutes() {
 	api := s.Router.Group("/api")
 	v1 := api.Group("/v1")
 	v2 := api.Group("/v2")
 
-	v1.GET("/common/:usernames", s.findCommonFilm)
-	v1.GET("/common/:usernames/:genres", s.findCommonFilm)
-	v2.GET("/party/:usernames", s.findPartyFilm)
+	v1.GET("/match/:usernames", s.match)
+	v1.GET("/match/:usernames/:genres", s.match)
+	v2.GET("/party/:usernames", s.party)
 }
