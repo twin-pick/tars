@@ -4,32 +4,39 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+
+	"github.com/charmbracelet/log"
 )
 
-func (s *Server) findCommonFilm(c *Context) {
-	queryParams := NewQueryParams(c)
+func (s *Server) match(c *Context) {
+	queryParams, err := NewQueryParams(c)
+	if err != nil {
+		log.Errorf("Error parsing query params: %v", err)
+		c.JSON(http.StatusBadRequest, Header{"error": err.Error()})
+		return
+	}
 
 	commonFilms, err := s.getCommonsFilms(queryParams)
 	if err != nil {
-		logError("Error getCommonsFilms: %v", err)
+		log.Errorf("Error getCommonsFilms: %v", err)
 		c.JSON(http.StatusInternalServerError, Header{"error": err.Error()})
 		return
 	}
 
 	if len(commonFilms) == 0 {
-		logWarn("No common films found")
+		log.Warnf("No common films found")
 		c.JSON(http.StatusNotFound, Header{"message": "No common films found"})
 		return
 	}
 
 	film, err := s.selectRandomFilm(commonFilms)
 	if err != nil {
-		logError("Error selecting random film: %v", err)
+		log.Errorf("Error selecting random film: %v", err)
 		c.JSON(http.StatusInternalServerError, Header{"error": err.Error()})
 		return
 	}
 
-	logInfo("Common film found: %s (%s)", film.Title, film.Date)
+	log.Infof("Common film found: %s (%s)", film.Title, film.Date)
 	c.JSON(http.StatusOK, film)
 }
 
