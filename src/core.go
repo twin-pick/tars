@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/charmbracelet/log"
+	"github.com/google/uuid"
 )
 
 func NewFilm(title string, date string) *Film {
@@ -22,6 +23,9 @@ func NewFilm(title string, date string) *Film {
 func NewWatchlist(films []*Film) *WatchList {
 	if films == nil {
 		films = []*Film{}
+	}
+	for i := range films {
+		films[i].Id = uuid.New().String()
 	}
 	return &WatchList{Films: films}
 }

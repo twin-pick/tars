@@ -23,6 +23,7 @@ type QueryParams struct {
 }
 
 type Film struct {
+	Id       string `json:"id"`
 	Title    string `json:"title"`
 	Director string `json:"director"`
 	Date     string `json:"date"`
