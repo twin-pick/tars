@@ -8,7 +8,7 @@ tasks:
 
   dev:
     desc: Run the program in development mode
-    deps: [build]
+    deps: [build, env]
     cmds:
       - ./bin/tars
 
@@ -22,3 +22,8 @@ tasks:
     cmds:
       - git tag v{{ .CLI_ARGS }}
       - git push origin v{{ .CLI_ARGS }}
+
+  env:
+    desc: Set up environment variables
+    cmds:
+      - ./scripts/env.sh
