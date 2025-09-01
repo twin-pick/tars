@@ -26,4 +26,5 @@ tasks:
   env:
     desc: Set up environment variables
     cmds:
+      - chmod +x ./scripts/env.sh
       - ./scripts/env.sh
