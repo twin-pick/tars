@@ -9,23 +9,10 @@ import (
 )
 
 func (s *Server) match(c *Context) {
-	queryParams, err := NewQueryParams(c)
+	commonFilms, err := s.getCommonsFilms(c)
 	if err != nil {
-		log.Errorf("Error parsing query params: %v", err)
-		c.JSON(http.StatusBadRequest, Header{"error": err.Error()})
-		return
-	}
-
-	commonFilms, err := s.getCommonsFilms(queryParams)
-	if err != nil {
-		log.Errorf("Error getCommonsFilms: %v", err)
+		log.Errorf("Error retrieving common films: %v", err)
 		c.JSON(http.StatusInternalServerError, Header{"error": err.Error()})
-		return
-	}
-
-	if len(commonFilms) == 0 {
-		log.Warnf("No common films found")
-		c.JSON(http.StatusNotFound, Header{"message": "No common films found"})
 		return
 	}
 

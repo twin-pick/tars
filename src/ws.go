@@ -49,12 +49,7 @@ func (s *Server) room(c *Context) {
 
 			log.Infof("Received vote in room %s: %+v", room.Id, vote)
 
-			selected := room.handleVote(vote)
-
-			if selected != nil {
-				log.Infof("Film selected in room %s: %+v", room.Id, selected)
-				room.broadcastFilmSelected(selected)
-			}
+			room.handleVote(vote)
 		}
 	}()
 }
@@ -97,6 +92,7 @@ func (r *Room) connectToRoom(c *Context) *WebsocketConn {
 func (r *Room) sendInitialData(conn *WebsocketConn) error {
 	r.Mutex.Lock()
 	defer r.Mutex.Unlock()
+
 	return conn.WriteJSON(r.Watchlist.Films)
 }
 
@@ -108,12 +104,58 @@ func (r *Room) handleDisconnect(conn *WebsocketConn) {
 	log.Infof("Client left room %s", r.Id)
 }
 
-func (r *Room) handleVote(vote Vote) *Film {
+func (r *Room) handleVote(vote Vote) {
 	r.Mutex.Lock()
 	defer r.Mutex.Unlock()
 
 	r.Votes = append(r.Votes, &vote)
-	return r.checkFilmSelected()
+
+	if len(r.Votes) == len(r.Clients) {
+		results := r.tallyVotes()
+
+		r.broadcastVoteResults(results)
+	}
+}
+
+func (r *Room) tallyVotes() []map[string]any {
+	voteCount := make(map[string]int)
+	for _, v := range r.Votes {
+		if v.WantToWatch {
+			voteCount[v.FilmId]++
+		}
+	}
+
+	results := []map[string]any{}
+	for _, film := range r.Watchlist.Films {
+		results = append(results, map[string]any{
+			"film":  film,
+			"votes": voteCount[film.Id],
+		})
+	}
+
+	return results
+}
+
+func (r *Room) broadcastVoteResults(results []map[string]any) {
+	r.Mutex.Lock()
+	clientsCopy := make([]*WebsocketConn, 0, len(r.Clients))
+	for client := range r.Clients {
+		clientsCopy = append(clientsCopy, client)
+	}
+	r.Mutex.Unlock()
+
+	event := map[string]any{
+		"event":   "vote_results",
+		"results": results,
+	}
+
+	for _, client := range clientsCopy {
+		if err := client.WriteJSON(event); err != nil {
+			log.Errorf("failed to send vote_results event: %v", err)
+			client.Close()
+			r.removeClient(client)
+		}
+	}
 }
 
 func (r *Room) broadcastFilmSelected(film *Film) {

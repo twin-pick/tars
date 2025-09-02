@@ -29,7 +29,7 @@ func NewWatchlist(films []*Film) *WatchList {
 	return &WatchList{Films: films}
 }
 
-func (s *Server) getCommonsFilms(qp *QueryParams) ([]*Film, error) {
+func (s *Server) fetchCommonsFilms(qp *QueryParams) ([]*Film, error) {
 	var wg WaitGroup
 	resultChan := make(chan *WatchList, len(qp.Usernames))
 
@@ -153,4 +153,28 @@ func (s *Server) getFilmDetails(film *Film) (*Film, error) {
 	film.Poster = omdbResponse.Poster
 
 	return film, nil
+}
+
+func (s *Server) getCommonsFilms(c *Context) ([]*Film, error) {
+	queryParams, err := NewQueryParams(c)
+	if err != nil {
+		log.Errorf("Error parsing query params: %v", err)
+		c.JSON(http.StatusBadRequest, Header{"error": err.Error()})
+		return nil, err
+	}
+
+	commonFilms, err := s.fetchCommonsFilms(queryParams)
+	if err != nil {
+		log.Errorf("Error getCommonsFilms: %v", err)
+		c.JSON(http.StatusInternalServerError, Header{"error": err.Error()})
+		return nil, err
+	}
+
+	if len(commonFilms) == 0 {
+		log.Warnf("No common films found")
+		c.JSON(http.StatusOK, Header{"message": "No common films found"})
+		return nil, err
+	}
+
+	return commonFilms, nil
 }
