@@ -151,6 +151,7 @@ func (s *Server) getFilmDetails(film *Film) (*Film, error) {
 
 	film.Director = omdbResponse.Director
 	film.Poster = omdbResponse.Poster
+	film.Duration = omdbResponse.Duration
 
 	return film, nil
 }
