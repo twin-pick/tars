@@ -52,11 +52,6 @@ type OMDbResponse struct {
 	Poster   string `json:"Poster"`
 }
 
-type WebsocketClient struct {
-	Id     string
-	Client *WebsocketConn
-}
-
 type Room struct {
 	Id        string
 	Clients   map[*WebsocketConn]bool
