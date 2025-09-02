@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"sync"
 
 	"github.com/charmbracelet/log"
+	"github.com/google/uuid"
 )
 
 func NewFilm(title string, date string) *Film {
@@ -23,11 +23,14 @@ func NewWatchlist(films []*Film) *WatchList {
 	if films == nil {
 		films = []*Film{}
 	}
+	for i := range films {
+		films[i].Id = uuid.New().String()
+	}
 	return &WatchList{Films: films}
 }
 
 func (s *Server) getCommonsFilms(qp *QueryParams) ([]*Film, error) {
-	var wg sync.WaitGroup
+	var wg WaitGroup
 	resultChan := make(chan *WatchList, len(qp.Usernames))
 
 	for _, username := range qp.Usernames {
@@ -125,7 +128,7 @@ func (s *Server) compareWatchlists(watchlists []*WatchList) ([]*Film, error) {
 
 func (s *Server) getFilmDetails(film *Film) (*Film, error) {
 	escapedTitle := url.QueryEscape(film.Title)
-	url := fmt.Sprintf("http://www.omdbapi.com/?t=%s&y=%s&apikey=%s", escapedTitle, film.Date, s.Config.OMDBApiKey)
+	url := fmt.Sprintf("http://www.omdbapi.com/?t=%s&y=%s&apikey=%s", escapedTitle, film.Date, s.Config.OMDbApiKey)
 
 	log.Infof("Fetching details for film: %s from URL: %s", film.Title, url)
 

@@ -15,8 +15,8 @@ func TestNewConfig(T *testing.T) {
 		T.Fatalf("Expected no error, got %v", err)
 	}
 
-	if config.OMDBApiKey != "testkey" {
-		T.Errorf("Expected OMDBApiKey to be 'testkey', got %s", config.OMDBApiKey)
+	if config.OMDbApiKey != "testkey" {
+		T.Errorf("Expected OMDBApiKey to be 'testkey', got %s", config.OMDbApiKey)
 	}
 	if config.ScrapperPort != "8080" {
 		T.Errorf("Expected ScrapperPort to be '8080', got %s", config.ScrapperPort)
