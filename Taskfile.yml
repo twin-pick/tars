@@ -29,4 +29,3 @@ tasks:
     cmds:
       - chmod +x ./scripts/setup_env.sh
       - ./scripts/setup_env.sh
-# {"filmId":"1cce313b-cc67-4de9-b2aa-d34969a86d87","wantToWatch":true,"socketId":"1dedda0a-a32e-4354-9900-b666a748179c"}
