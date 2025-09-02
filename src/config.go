@@ -21,7 +21,7 @@ func NewConfig() (*Config, error) {
 	}
 
 	return &Config{
-		OMDBApiKey:   omdbKey,
+		OMDbApiKey:   omdbKey,
 		ScrapperPort: scrapperPort,
 		ExposedPort:  exposedPort,
 	}, nil

@@ -5,7 +5,16 @@ import (
 	"sync"
 
 	"github.com/charmbracelet/log"
+	"github.com/google/uuid"
 )
+
+func NewRoom(watchlist *WatchList) *Room {
+	return &Room{
+		Id:        uuid.New().String(),
+		Clients:   make(map[*WebsocketConn]bool),
+		Watchlist: watchlist,
+	}
+}
 
 func (s *Server) party(c *Context) {
 	queryParams, err := NewQueryParams(c)
@@ -35,8 +44,15 @@ func (s *Server) party(c *Context) {
 		return
 	}
 
-	log.Infof("Found %d common films", len(commonFilmsWithDetails))
-	c.JSON(http.StatusOK, commonFilmsWithDetails)
+	watchlist := NewWatchlist(commonFilmsWithDetails)
+	room := NewRoom(watchlist)
+
+	s.createRoom(room)
+
+	log.Infof("Found %d common films", len(watchlist.Films))
+	c.JSON(http.StatusOK, Header{
+		"roomId": room.Id,
+	})
 }
 
 func (s *Server) getCommonsFilmsDetails(films []*Film) ([]*Film, error) {
