@@ -19,7 +19,7 @@ func NewServer(cfg *Config) *Server {
 	}))
 
 	return &Server{
-		Router: gin.Default(),
+		Router: router,
 		Config: cfg,
 		Rooms:  make(map[string]*Room),
 	}
