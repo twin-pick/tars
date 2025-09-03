@@ -57,11 +57,6 @@ type OMDbResponse struct {
 	Duration string `json:"Runtime"`
 }
 
-type WebsocketClient struct {
-	Id     string
-	Client *WebsocketConn
-}
-
 type Room struct {
 	Id        string
 	Clients   map[*WebsocketConn]bool
