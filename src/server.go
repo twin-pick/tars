@@ -24,8 +24,7 @@ func (s *Server) registerRoutes() {
 	v1 := api.Group("/v1")
 	v2 := api.Group("/v2")
 
-	v1.GET("/match/:usernames", s.match)
-	v1.GET("/match/:usernames/:genres", s.match)
-	v2.GET("/party/:usernames", s.party)
+	v1.GET("/match", s.match)
+	v2.GET("/party", s.party)
 	v2.GET("/party/room/:roomId", s.room)
 }

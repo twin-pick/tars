@@ -155,3 +155,39 @@ func (s *Server) getFilmDetails(film *Film) (*Film, error) {
 
 	return film, nil
 }
+
+func (s *Server) getCommonFilmsDetails(films []*Film) ([]*Film, error) {
+	var (
+		wg         WaitGroup
+		mu         Mutex
+		firstError error
+	)
+
+	for i, film := range films {
+		wg.Add(1)
+		go func(i int, film *Film) {
+			defer wg.Done()
+			details, err := s.getFilmDetails(film)
+			if err != nil {
+				log.Errorf("Error getting film details for %s: %v", film.Title, err)
+				mu.Lock()
+				if firstError == nil {
+					firstError = err
+				}
+				mu.Unlock()
+				return
+			}
+			mu.Lock()
+			films[i] = details
+			mu.Unlock()
+		}(i, film)
+	}
+
+	wg.Wait()
+
+	if firstError != nil {
+		return nil, firstError
+	}
+
+	return films, nil
+}

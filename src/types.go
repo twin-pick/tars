@@ -30,9 +30,12 @@ type Config struct {
 	ExposedPort  string
 }
 
+type Duration string
+
 type QueryParams struct {
 	Usernames []string
 	Genres    []string
+	Duration  string
 }
 
 type Film struct {
