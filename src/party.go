@@ -16,7 +16,14 @@ func NewRoom(watchlist *WatchList) *Room {
 }
 
 func (s *Server) party(c *Context) {
-	commonFilms, err := s.getCommonsFilms(c)
+	qp, err := NewQueryParams(c)
+	if err != nil {
+		log.Errorf("Error parsing query params: %v", err)
+		c.JSON(http.StatusBadRequest, Header{"error": err.Error()})
+		return
+	}
+
+	commonFilms, err := s.getCommonsFilms(qp)
 	if err != nil {
 		log.Errorf("Error retrieving common films: %v", err)
 		c.JSON(http.StatusInternalServerError, Header{"error": err.Error()})
