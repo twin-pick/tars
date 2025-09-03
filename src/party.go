@@ -4,16 +4,7 @@ import (
 	"net/http"
 
 	"github.com/charmbracelet/log"
-	"github.com/google/uuid"
 )
-
-func NewRoom(watchlist *WatchList) *Room {
-	return &Room{
-		Id:        uuid.New().String(),
-		Clients:   make(map[*WebsocketConn]bool),
-		Watchlist: watchlist,
-	}
-}
 
 func (s *Server) party(c *Context) {
 	qp, err := NewQueryParams(c)
