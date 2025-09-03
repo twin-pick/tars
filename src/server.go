@@ -11,8 +11,7 @@ func NewServer(cfg *Config) *Server {
 	router := gin.Default()
 
 	router.Use(cors.New(cors.Config{
-		AllowAllOrigins: true,
-		// AllowOrigins:     []string{"http://localhost:8081", "http://localhost:8082"},
+		AllowOrigins:     []string{"http://localhost:8081", "http://localhost:8082"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept"},
 		ExposeHeaders:    []string{"Content-Length"},
