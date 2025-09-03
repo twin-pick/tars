@@ -8,15 +8,18 @@ import (
 )
 
 func NewQueryParams(c *Context) (*QueryParams, error) {
-	usernames, err := getUsernamesParams(c.Param("usernames"))
+	usernames, err := getUsernamesParams(c.Query("usernames"))
 	if err != nil {
 		return nil, err
 	}
-	genres := getGenresParams(c.Param("genres"))
+
+	genres := getGenresParams(c.Query("genres"))
+	duration := getDurationParams(c.Query("duration"))
 
 	return &QueryParams{
 		Usernames: usernames,
 		Genres:    genres,
+		Duration:  duration,
 	}, nil
 }
 
@@ -35,4 +38,11 @@ func getGenresParams(queryParams string) []string {
 	}
 	genres := strings.Split(queryParams, ",")
 	return genres
+}
+
+func getDurationParams(queryParams string) string {
+	if queryParams == "" {
+		return ""
+	}
+	return queryParams
 }

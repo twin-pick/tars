@@ -2,7 +2,6 @@ package src
 
 import (
 	"net/http"
-	"sync"
 
 	"github.com/charmbracelet/log"
 	"github.com/google/uuid"
@@ -24,7 +23,13 @@ func (s *Server) party(c *Context) {
 		return
 	}
 
-	commonFilmsWithDetails, err := s.getCommonsFilmsDetails(commonFilms)
+	if len(commonFilms) == 0 {
+		log.Warnf("No common films found")
+		c.JSON(http.StatusOK, Header{"message": "No common films found"})
+		return
+	}
+
+	commonFilmsWithDetails, err := s.getCommonFilmsDetails(commonFilms)
 	if err != nil {
 		log.Errorf("Error getting common films details: %v", err)
 		c.JSON(http.StatusInternalServerError, Header{"error": err.Error()})
@@ -40,40 +45,4 @@ func (s *Server) party(c *Context) {
 	c.JSON(http.StatusOK, Header{
 		"roomId": room.Id,
 	})
-}
-
-func (s *Server) getCommonsFilmsDetails(films []*Film) ([]*Film, error) {
-	var (
-		wg         sync.WaitGroup
-		mu         sync.Mutex
-		firstError error
-	)
-
-	for i, film := range films {
-		wg.Add(1)
-		go func(i int, film *Film) {
-			defer wg.Done()
-			details, err := s.getFilmDetails(film)
-			if err != nil {
-				log.Errorf("Error getting film details for %s: %v", film.Title, err)
-				mu.Lock()
-				if firstError == nil {
-					firstError = err
-				}
-				mu.Unlock()
-				return
-			}
-			mu.Lock()
-			films[i] = details
-			mu.Unlock()
-		}(i, film)
-	}
-
-	wg.Wait()
-
-	if firstError != nil {
-		return nil, firstError
-	}
-
-	return films, nil
 }

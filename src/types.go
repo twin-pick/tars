@@ -30,9 +30,12 @@ type Config struct {
 	ExposedPort  string
 }
 
+type Duration string
+
 type QueryParams struct {
 	Usernames []string
 	Genres    []string
+	Duration  string
 }
 
 type Film struct {
@@ -41,6 +44,7 @@ type Film struct {
 	Director string `json:"director"`
 	Date     string `json:"date"`
 	Poster   string `json:"poster"`
+	Duration string `json:"duration"`
 }
 
 type WatchList struct {
@@ -50,6 +54,7 @@ type WatchList struct {
 type OMDbResponse struct {
 	Director string `json:"Director"`
 	Poster   string `json:"Poster"`
+	Duration string `json:"Runtime"`
 }
 
 type Room struct {
