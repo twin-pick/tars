@@ -34,6 +34,10 @@ func (s *Server) party(c *Context) {
 		return
 	}
 
+	if qp.Duration != "" {
+		commonFilmsWithDetails = filterFilmsByDuration(commonFilmsWithDetails, qp.Duration)
+	}
+
 	watchlist := NewWatchlist(commonFilmsWithDetails)
 	room := NewRoom(watchlist)
 
