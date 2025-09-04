@@ -1,85 +1,57 @@
 package src
 
 import (
+	"regexp"
 	"strconv"
 	"strings"
 )
 
-const (
-	Duration90   Duration = "90"
-	Duration120  Duration = "120"
-	Duration120p Duration = "120p"
-)
+const MAX_SHORT_DURATION = 100
+const MAX_MEDIUM_DURATION = 135
 
-func parseDuration(duration string) Duration {
-	switch duration {
-	case "90":
-		return Duration90
-	case "120":
-		return Duration120
-	case "120p", "120+":
-		return Duration120p
-	default:
-		return Duration120p
-	}
-}
-
-func stringToMinutes(s string) int {
-	s = strings.ToLower(strings.TrimSpace(s))
-
-	if strings.Contains(s, "h") {
-		parts := strings.Split(s, "h")
-		hours, _ := strconv.Atoi(parts[0])
-		minutes := 0
-		if len(parts) > 1 && parts[1] != "" {
-			m, _ := strconv.Atoi(parts[1])
-			minutes = m
-		}
-		return hours*60 + minutes
-	}
-
-	if strings.Contains(s, "min") {
-		m, _ := strconv.Atoi(strings.ReplaceAll(s, "min", ""))
-		return m
-	}
-
-	m, _ := strconv.Atoi(s)
-	return m
-}
-
-func parseFilmDuration(film *Film) Duration {
-	minutes := stringToMinutes(film.Duration)
-
-	if minutes <= 100 {
-		return Duration90
-	} else if minutes <= 140 {
-		return Duration120
-	} else {
-		return Duration120p
-	}
-}
-
-func filterFilmsByDuration(films []*Film, target Duration) []*Film {
+func filterFilmsByDuration(films []*Film, duration string) []*Film {
 	var result []*Film
-	for _, f := range films {
-		filmDur := parseFilmDuration(f)
 
-		if shouldIncludeDuration(filmDur, target) {
+	for _, f := range films {
+		minutes := stringToMinutes(f.Duration)
+
+		switch duration {
+		case "short":
+			if minutes > 0 && minutes <= MAX_SHORT_DURATION {
+				result = append(result, f)
+			}
+		case "medium":
+			if minutes > MAX_SHORT_DURATION && minutes <= MAX_MEDIUM_DURATION {
+				result = append(result, f)
+			}
+		case "long":
+			result = append(result, f)
+		}
+
+		if f.Duration == "" && duration == "long" {
 			result = append(result, f)
 		}
 	}
+
 	return result
 }
 
-func shouldIncludeDuration(filmDur, target Duration) bool {
-	switch target {
-	case Duration90:
-		return filmDur == Duration90
-	case Duration120:
-		return filmDur == Duration90 || filmDur == Duration120
-	case Duration120p:
-		return true
-	default:
-		return false
+func stringToMinutes(minutes string) int {
+	minutes = strings.TrimSpace(minutes)
+	if minutes == "" {
+		return 0
 	}
+
+	reMin := regexp.MustCompile(`(\d+)\s*min`)
+	if match := reMin.FindStringSubmatch(minutes); len(match) == 2 {
+		if val, err := strconv.Atoi(match[1]); err == nil {
+			return val
+		}
+	}
+
+	if val, err := strconv.Atoi(minutes); err == nil {
+		return val
+	}
+
+	return 0
 }

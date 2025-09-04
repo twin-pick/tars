@@ -34,20 +34,13 @@ func (s *Server) match(c *Context) {
 	if qp.Duration != "" {
 		commonFilmsWithDetails, err := s.getCommonFilmsDetails(commonFilms)
 		if err != nil {
-			log.Errorf("Error getting film details: %v", err)
+			log.Errorf("Error getCommonFilmsDetails: %v", err)
 			c.JSON(http.StatusInternalServerError, Header{"error": err.Error()})
 			return
 		}
 
-		duration := parseDuration(qp.Duration)
-		filtered := filterFilmsByDuration(commonFilmsWithDetails, duration)
-
-		if len(filtered) == 0 {
-			c.JSON(http.StatusNotFound, Header{"message": "No films found for this duration"})
-			return
-		}
-
-		filmSelected, err = s.selectRandomFilm(filtered)
+		commonFilmsFilteredByDuration := filterFilmsByDuration(commonFilmsWithDetails, qp.Duration)
+		filmSelected, err = s.selectRandomFilm(commonFilmsFilteredByDuration)
 		if err != nil {
 			log.Errorf("Error selecting random film: %v", err)
 			c.JSON(http.StatusInternalServerError, Header{"error": err.Error()})
@@ -59,6 +52,13 @@ func (s *Server) match(c *Context) {
 			c.JSON(http.StatusInternalServerError, Header{"error": err.Error()})
 			return
 		}
+
+		filmSelected, err = s.getFilmDetails(filmSelected)
+		if err != nil {
+			log.Errorf("Error getFilmDetails: %v", err)
+			c.JSON(http.StatusInternalServerError, Header{"error": err.Error()})
+			return
+		}
 	}
 
 	log.Infof("Common film found: %s (%s)", filmSelected.Title, filmSelected.Date)
@@ -67,8 +67,8 @@ func (s *Server) match(c *Context) {
 
 func (s *Server) selectRandomFilm(films []*Film) (*Film, error) {
 	if len(films) == 0 {
-		return &Film{}, fmt.Errorf("No common films found")
+		return &Film{}, fmt.Errorf("no films available to select from")
 	}
 	randNum := rand.Intn(len(films))
-	return s.getFilmDetails(films[randNum])
+	return films[randNum], nil
 }
