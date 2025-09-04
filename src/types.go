@@ -30,9 +30,12 @@ type Config struct {
 	ExposedPort  string
 }
 
+type Duration string
+
 type QueryParams struct {
 	Usernames []string
 	Genres    []string
+	Duration  string
 }
 
 type Film struct {
@@ -41,6 +44,7 @@ type Film struct {
 	Director string `json:"director"`
 	Date     string `json:"date"`
 	Poster   string `json:"poster"`
+	Duration string `json:"duration"`
 }
 
 type WatchList struct {
@@ -50,13 +54,19 @@ type WatchList struct {
 type OMDbResponse struct {
 	Director string `json:"Director"`
 	Poster   string `json:"Poster"`
+	Duration string `json:"Runtime"`
+}
+
+type Client struct {
+	Connection *WebsocketConn
+	Votes      map[string]*Vote
 }
 
 type Room struct {
 	Id        string
-	Clients   map[*WebsocketConn]bool
+	Clients   map[string]*WebsocketConn
 	Watchlist *WatchList
-	Votes     []*Vote
+	Votes     map[string]*Vote
 	Mutex     Mutex
 }
 
@@ -64,4 +74,26 @@ type Vote struct {
 	FilmId      string `json:"filmId"`
 	WantToWatch bool   `json:"wantToWatch"`
 	SocketId    string `json:"socketId"`
+}
+
+type EventIdentification struct {
+	Event    string `json:"event"`
+	SocketId string `json:"socketId"`
+}
+
+type EventData struct {
+	Event string  `json:"event"`
+	Data  []*Film `json:"films"`
+}
+
+type VotesResults map[int]*Film
+
+type EventResults struct {
+	Event   string           `json:"event"`
+	Results []map[string]any `json:"results"`
+}
+
+type EventFilmSelected struct {
+	Event        string `json:"event"`
+	FilmSelected *Film  `json:"film"`
 }
