@@ -250,37 +250,3 @@ func (r *Room) broadcastVoteResults(results []*Result) {
 		}
 	}
 }
-
-// func (r *Room) tallyVotes() []map[string]any {
-// 	voteCount := make(map[string]int)
-// 	for _, v := range r.Votes {
-// 		if v.WantToWatch {
-// 			voteCount[v.FilmId]++
-// 		}
-// 	}
-
-// 	results := []map[string]any{}
-// 	for _, film := range r.Watchlist.Films {
-// 		results = append(results, map[string]any{
-// 			"film":  film,
-// 			"votes": voteCount[film.Id],
-// 		})
-// 	}
-
-// 	return results
-// }
-
-// func (r *Room) broadcastVoteResults(results []map[string]any) {
-// 	event := EventResults{
-// 		Event:   "result",
-// 		Results: results,
-// 	}
-
-// 	for _, client := range r.Clients {
-// 		if err := client.WriteJSON(event); err != nil {
-// 			log.Errorf("failed to send result event: %v", err)
-// 			client.Close()
-// 			r.removeClient(client)
-// 		}
-// 	}
-// }
