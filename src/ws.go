@@ -3,6 +3,7 @@ package src
 import (
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/charmbracelet/log"
 	"github.com/google/uuid"
@@ -18,6 +19,13 @@ func NewRoom(watchlist *WatchList) *Room {
 		Clients:   make(map[string]*WebsocketConn),
 		Watchlist: watchlist,
 		Votes:     make(map[string]*Vote),
+	}
+}
+
+func NewResult(film *Film, votes int) *Result {
+	return &Result{
+		Film:  film,
+		Votes: strconv.Itoa(votes),
 	}
 }
 
@@ -138,7 +146,7 @@ func (r *Room) handleVote(vote *Vote) {
 	r.Mutex.Lock()
 	defer r.Mutex.Unlock()
 
-	r.Votes[vote.SocketId] = vote
+	r.Votes[vote.SocketId+vote.FilmId] = vote
 
 	log.Infof("Vote recorded by socket %s: filmId: %s, wantToWatch: %t", vote.SocketId, vote.FilmId, vote.WantToWatch)
 	log.Infof("Current votes in room %s", r.Id)
@@ -148,7 +156,7 @@ func (r *Room) handleVote(vote *Vote) {
 	}
 
 	if len(r.Votes) == len(r.Clients)*len(r.Watchlist.Films) {
-		results := r.tallyVotes()
+		results := r.getRoomResults()
 		r.broadcastVoteResults(results)
 		log.Infof("All votes received in room %s", r.Id)
 	}
@@ -210,28 +218,27 @@ func (r *Room) removeClient(conn *WebsocketConn) {
 	}
 }
 
-func (r *Room) tallyVotes() []map[string]any {
-	voteCount := make(map[string]int)
-	for _, v := range r.Votes {
-		if v.WantToWatch {
-			voteCount[v.FilmId]++
-		}
-	}
+func (r *Room) getRoomResults() []*Result {
+	results := []*Result{}
 
-	results := []map[string]any{}
 	for _, film := range r.Watchlist.Films {
-		results = append(results, map[string]any{
-			"film":  film,
-			"votes": voteCount[film.Id],
-		})
+		var voteCount int
+
+		for _, vote := range r.Votes {
+			if film.Id == vote.FilmId && vote.WantToWatch {
+				voteCount++
+			}
+		}
+
+		results = append(results, NewResult(film, voteCount))
 	}
 
 	return results
 }
 
-func (r *Room) broadcastVoteResults(results []map[string]any) {
+func (r *Room) broadcastVoteResults(results []*Result) {
 	event := EventResults{
-		Event:   "result",
+		Event:   "results",
 		Results: results,
 	}
 
