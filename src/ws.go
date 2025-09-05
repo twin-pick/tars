@@ -146,7 +146,7 @@ func (r *Room) handleVote(vote *Vote) {
 	r.Mutex.Lock()
 	defer r.Mutex.Unlock()
 
-	r.Votes[vote.SocketId] = vote
+	r.Votes[vote.SocketId+vote.FilmId] = vote
 
 	log.Infof("Vote recorded by socket %s: filmId: %s, wantToWatch: %t", vote.SocketId, vote.FilmId, vote.WantToWatch)
 	log.Infof("Current votes in room %s", r.Id)
@@ -238,7 +238,7 @@ func (r *Room) getRoomResults() []*Result {
 
 func (r *Room) broadcastVoteResults(results []*Result) {
 	event := EventResults{
-		Event: "results",
+		Event:   "results",
 		Results: results,
 	}
 
