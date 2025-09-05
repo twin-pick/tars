@@ -86,11 +86,16 @@ type EventData struct {
 	Data  []*Film `json:"films"`
 }
 
+type Result struct {
+	Film *Film `json:"film"`
+	Votes string `json:"votes"`
+}
+
 type VotesResults map[int]*Film
 
 type EventResults struct {
 	Event   string           `json:"event"`
-	Results []map[string]any `json:"results"`
+	Results []*Result `json:"results"`
 }
 
 type EventFilmSelected struct {
